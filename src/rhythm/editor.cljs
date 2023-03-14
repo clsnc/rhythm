@@ -11,7 +11,13 @@
                   (.preventDefault event)
                   (let [new-text (-> event (.-target) (.-value))
                         new-tree (proj/replace-tree-block-text tree path new-text)]
-                    (replace-tree! new-tree)))}]))
+                    (replace-tree! new-tree)))
+      :onKeyPress (fn [event]
+                    (let [key-str (.-key event)]
+                      (if (= key-str "Enter")
+                        (do (.preventDefault event)
+                            (replace-tree! (proj/insert-block-after tree path proj/empty-block)))
+                        nil)))}]))
 
 (defn editor-block-children [tree path replace-tree!]
   (let [block (proj/path->block tree path)
