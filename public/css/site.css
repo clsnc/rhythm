@@ -7,6 +7,18 @@ body {
     background-color: lightgray;
 }
 
+.editor {
+    width: 100%;
+}
+
+.block {
+    width: 100%;
+}
+
+.block-children {
+    margin-left: 40px;
+}
+
 .text-input {
     background-color: white;
 }

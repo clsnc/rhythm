@@ -2,19 +2,19 @@
     (:require
      [reagent.core :as r]
      [reagent.dom :as d]
-     [rhythm.editor :as editor]
-     [rhythm.project :as proj]))
+     [rhythm.ui.editor :as editor]
+     [rhythm.syntax.ast :as ast]))
 
-(def state (r/atom proj/default-text-tree))
+(def state (r/atom (ast/->empty-ast)))
 
-(defn replace-root! [new-tree]
-  (reset! state new-tree))
+(defn swap-block! [path op]
+  (swap! state #(ast/update-block % path op)))
 
 ;; -------------------------
 ;; Views
 
 (defn home-page []
-  [editor/editor @state replace-root!])
+  [editor/editor @state swap-block!])
 
 ;; -------------------------
 ;; Initialize app
