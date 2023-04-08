@@ -11,7 +11,7 @@
           text-updater #(blocks/update-header % new-text)]
       (swap-block! path text-updater))))
 
-(defn- enter-down-handler
+(defn- enter-down-handler!
   "Handles an onKeyDown event for Enter."
   [event path swap-block!]
   (.preventDefault event)
@@ -34,5 +34,5 @@
   (fn [event]
     (let [pressed-key (.-key event)]
       (cond 
-        (= pressed-key "Enter") (enter-down-handler event path swap-block!)
+        (= pressed-key "Enter") (enter-down-handler! event path swap-block!)
         (= pressed-key "Tab") (tab-down-handler! event path swap-block!)))))
