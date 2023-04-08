@@ -9,3 +9,8 @@
   "Returns the position of the first occurrence of an element in a collection."
   [element coll]
   (first (matching-indices #(= %1 element) coll)))
+
+(defn split-off-last
+  "Returns the a tuple of the form [seq-of-all-but-last-element last-element]."
+  [s]
+  [(drop-last s) (last s)])

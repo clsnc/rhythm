@@ -27,10 +27,42 @@
   [parent child-id]
   ((:child-id->child parent) child-id))
 
-(defn child-pos
+(defn child-id-by-pos
+  "Returns the ID of the child at a given position. If no such child is present, returns 
+   nil."
+  [parent child-pos]
+  ((:pos->child-id parent) child-pos))
+
+(defn count-children
+  "Returns the number of children in a block."
+  [block]
+  (count (:pos->child-id block)))
+
+(defn find-child-pos-by-id
+  "Returns the position of the child with a given ID inside its parent block."
+  [parent child-id]
+  (utils/find-first-pos child-id (:pos->child-id parent)))
+
+(defn find-child-pos
   "Returns the position of a child block inside of its parent block."
   [parent child]
-  (utils/find-first-pos (:id child) (:pos->child-id parent)))
+  (find-child-pos-by-id parent (:id child)))
+
+(defn get-sibling-pos-by-child-id
+  "Returns the position of a sibling the given offset from a child."
+  [parent child-id offset]
+  (let [child-pos (find-child-pos-by-id parent child-id)
+        sibling-pos (+ child-pos offset)]
+    (if (and (>= sibling-pos 0) (<= sibling-pos (count-children parent)))
+      sibling-pos
+      nil)))
+
+(defn get-sibling-id-by-child-id
+  "Returns the ID of a sibling the given offset from a child. Returns nil if there 
+   is no valid sibling at the given offset."
+  [parent child-id offset]
+  (when-let [sibling-pos (get-sibling-pos-by-child-id parent child-id offset)]
+    (child-id-by-pos parent sibling-pos)))
 
 (defn insert-child
   "Return a new parent block with the child block inserted at a 
@@ -40,6 +72,41 @@
         new-pos->child-id (vec (m/insert-nth pos (:id child) (:pos->child-id parent)))
         new-parent (assoc partial-new-parent :pos->child-id new-pos->child-id)]
     new-parent))
+
+(defn remove-child-by-id
+  "Removes a child with a given ID from a block if the child exists."
+  [parent child-id]
+  (let [child-pos (find-child-pos-by-id parent child-id)
+        new-pos->child-id (vec (m/remove-nth child-pos (:pos->child-id parent)))
+        new-child-id->child (dissoc (:child-id->child parent) child-id)
+        new-parent (assoc parent
+                          :pos->child-id new-pos->child-id
+                          :child-id->child new-child-id->child)]
+    new-parent))
+
+(defn make-child-grandchild
+  "Move a child down the tree to become a grandchild. moving-child-id is the ID of the child 
+   being moved. stable-child-id is the ID of the child to become the moving child's new 
+   parent. new-moving-child-pos is the new position the moving child will take inside the 
+   stable child."
+  [parent stable-child-id moving-child-id new-moving-child-pos]
+  (let [stable-child (child-by-id parent stable-child-id)
+        moving-child (child-by-id parent moving-child-id)
+        temp-new-parent (remove-child-by-id parent moving-child-id)
+        new-stable-child (insert-child stable-child moving-child new-moving-child-pos)
+        new-parent (set-child temp-new-parent new-stable-child)]
+    new-parent))
+
+(defn move-child-inside-preceding-sibling
+  "Move a child down the tree to become a grandchild, where its parent is its former 
+   preceding sibling. If the child has no preceding sibling, no changes will be made."
+  [parent moving-child-id]
+  (let [stable-child-id (get-sibling-id-by-child-id parent moving-child-id -1)]
+    (if (nil? stable-child-id)
+      parent
+      (let [stable-child (child-by-id parent stable-child-id)
+            new-moving-child-pos (count-children stable-child)]
+        (make-child-grandchild parent stable-child-id moving-child-id new-moving-child-pos)))))
 
 (defn split-child-in-header
   "Split a child into two children at a given header position. The 
@@ -51,7 +118,7 @@
         new-header1 (subs header header-pos)
         new-child0 (->text-code-block new-header0)
         new-child1 (assoc child :header new-header1)
-        partial-new-parent (insert-child parent new-child0 (child-pos parent child))
+        partial-new-parent (insert-child parent new-child0 (find-child-pos parent child))
         new-parent (set-child partial-new-parent new-child1)]
     new-parent))
 

@@ -1,5 +1,6 @@
 (ns rhythm.ui.actions
-  (:require [rhythm.syntax.blocks :as blocks]))
+  (:require [rhythm.syntax.blocks :as blocks]
+            [rhythm.utils :as utils]))
 
 (defn ->header-change-handler
   "Returns an onChange event handler for the header of an editor block that handles
@@ -15,16 +16,23 @@
   [event path swap-block!]
   (.preventDefault event)
   (let [cursor-pos (-> event .-target .-selectionStart)
-        parent-path (drop-last path)
-        child-id (last path)
+        [parent-path child-id] (utils/split-off-last path)
         splitter #(blocks/split-child-in-header % child-id cursor-pos)]
     (swap-block! parent-path splitter)))
+
+(defn- tab-down-handler!
+  "Handles an onKeyDown event for Tab."
+  [event path swap-block!]
+  (.preventDefault event)
+  (let [[parent-path child-id] (utils/split-off-last path)
+        mover #(blocks/move-child-inside-preceding-sibling % child-id)]
+    (swap-block! parent-path mover)))
 
 (defn ->key-down-handler
   "Returns an onKeyDown event handler for the header of an editor block."
   [path swap-block!]
   (fn [event]
     (let [pressed-key (.-key event)]
-      (if (= pressed-key "Enter")
-        (enter-down-handler event path swap-block!)
-        nil))))
+      (cond 
+        (= pressed-key "Enter") (enter-down-handler event path swap-block!)
+        (= pressed-key "Tab") (tab-down-handler! event path swap-block!)))))
