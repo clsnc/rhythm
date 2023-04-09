@@ -16,6 +16,13 @@
   [header]
   (->CodeBlock header {} [] (gensym)))
 
+(defn block-path->key-path
+  "Returns a sequence of keys for following a given block ID path through a code tree."
+  [path]
+  (m/interleave-all 
+   (repeat (count path) :child-id->child)
+   path))
+
 (defn child-blocks
   "Returns the children of a given code block."
   [block]
@@ -84,18 +91,42 @@
                           :child-id->child new-child-id->child)]
     new-parent))
 
-(defn make-child-grandchild
-  "Move a child down the tree to become a grandchild. moving-child-id is the ID of the child 
-   being moved. stable-child-id is the ID of the child to become the moving child's new 
-   parent. new-moving-child-pos is the new position the moving child will take inside the 
-   stable child."
-  [parent stable-child-id moving-child-id new-moving-child-pos]
-  (let [stable-child (child-by-id parent stable-child-id)
-        moving-child (child-by-id parent moving-child-id)
-        temp-new-parent (remove-child-by-id parent moving-child-id)
-        new-stable-child (insert-child stable-child moving-child new-moving-child-pos)
-        new-parent (set-child temp-new-parent new-stable-child)]
-    new-parent))
+(defn get-descendant
+  "Returns the block at desc-path. desc-path is followed downward from 
+   the ancestor block."
+  [ancestor desc-path]
+  (let [desc-key-path (block-path->key-path desc-path)]
+    (get-in ancestor desc-key-path)))
+
+(defn update-descendant
+  "Updates the block at desc-path with f and supplied args. If the path 
+   is empty, f will be applied directly to ancestor. desc-path is followed 
+   downward from ancestor."
+  [ancestor desc-path f & args]
+  (let [desc-key-path (block-path->key-path desc-path)]
+    (apply utils/update-root-or-in ancestor desc-key-path f args)))
+
+(defn remove-descendant
+  "Removes the block at desc-path. desc-path is followed downward from ancestor."
+  [ancestor desc-path]
+  (let [[desc-parent-path desc-id] (utils/split-off-last desc-path)]
+    (update-descendant ancestor desc-parent-path remove-child-by-id desc-id)))
+
+(defn insert-descendant
+  "Inserts a block into the block at parent-path. desc will have position pos 
+   within its new parent block. parent-path is followed downward from ancestor."
+  [ancestor parent-path desc pos]
+  (update-descendant ancestor parent-path insert-child desc pos))
+
+(defn move-descendant
+  "Moves the block at start-path to be a child of the block at new-parent-path 
+   with position dest-pos. start-path and new-parent-path are followed downward 
+   from ancestor."
+  [ancestor start-path new-parent-path dest-pos]
+  (let [desc (get-descendant ancestor start-path)]
+    (-> ancestor
+        (remove-descendant start-path)
+        (insert-descendant new-parent-path desc dest-pos))))
 
 (defn move-child-inside-preceding-sibling
   "Move a child down the tree to become a grandchild, where its parent is its former 
@@ -106,21 +137,19 @@
       parent
       (let [stable-child (child-by-id parent stable-child-id)
             new-moving-child-pos (count-children stable-child)]
-        (make-child-grandchild parent stable-child-id moving-child-id new-moving-child-pos)))))
+        (move-descendant parent [moving-child-id] [stable-child-id] new-moving-child-pos)))))
 
 (defn split-child-in-header
   "Split a child into two children at a given header position. The 
    second new child will keep the children of the original child."
   [parent child-id header-pos]
   (let [child (child-by-id parent child-id)
-        header (:header child)
-        new-header0 (subs header 0 header-pos)
-        new-header1 (subs header header-pos)
+        [new-header0 new-header1] (utils/split-str-at-pos (:header child) header-pos)
         new-child0 (->text-code-block new-header0)
-        new-child1 (assoc child :header new-header1)
-        partial-new-parent (insert-child parent new-child0 (find-child-pos parent child))
-        new-parent (set-child partial-new-parent new-child1)]
-    new-parent))
+        new-child1 (assoc child :header new-header1)]
+    (-> parent
+        (insert-child new-child0 (find-child-pos parent child))
+        (set-child new-child1))))
 
 (defn set-child
   "Add a new child to a parent block. The new child will not be given 

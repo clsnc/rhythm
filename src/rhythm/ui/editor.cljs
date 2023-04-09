@@ -11,7 +11,7 @@
    {:class :editor
     :style {:display :flex
             :flex-direction :column}}
-   (editor-block-children (:root tree) [:root] swap-block!)])
+   (editor-block-children (:root tree) [] swap-block!)])
 
 (defn- editor-block
   "Displays a code block in an editor. This includes the header and children of the block."
