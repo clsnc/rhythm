@@ -2,9 +2,9 @@
   (:require [medley.core :as m]
             [rhythm.utils :as utils]))
 
-(declare ->text-code-block set-child)
+(declare ->text-code-block replace-child valid-child-pos?)
 
-(defrecord CodeBlock [header child-id->child pos->child-id id])
+(defrecord CodeBlock [header children id])
 
 (defn ->empty-code-block
   "Returns a new code block with an empty header and no children."
@@ -14,82 +14,41 @@
 (defn ->text-code-block
   "Returns a new code block with the given header and no children."
   [header]
-  (->CodeBlock header {} [] (gensym)))
+  (->CodeBlock header [] (gensym)))
 
 (defn block-path->key-path
   "Returns a sequence of keys for following a given block ID path through a code tree."
   [path]
   (m/interleave-all 
-   (repeat (count path) :child-id->child)
+   (repeat (count path) :children)
    path))
 
 (defn child-blocks
   "Returns the children of a given code block."
   [block]
-  (map (:child-id->child block) (:pos->child-id block)))
-
-(defn child-by-id
-  "Returns the child of a block with the given ID. If no such child is present, returns
-   nil."
-  [parent child-id]
-  ((:child-id->child parent) child-id))
-
-(defn child-id-by-pos
-  "Returns the ID of the child at a given position. If no such child is present, returns 
-   nil."
-  [parent child-pos]
-  ((:pos->child-id parent) child-pos))
+  (:children block))
 
 (defn count-children
   "Returns the number of children in a block."
   [block]
-  (count (:pos->child-id block)))
+  (count (:children block)))
 
-(defn find-child-pos-by-id
-  "Returns the position of the child with a given ID inside its parent block."
-  [parent child-id]
-  (utils/find-first-pos child-id (:pos->child-id parent)))
-
-(defn find-child-pos
-  "Returns the position of a child block inside of its parent block."
-  [parent child]
-  (find-child-pos-by-id parent (:id child)))
-
-(defn get-sibling-pos-by-child-id
-  "Returns the position of a sibling the given offset from a child."
-  [parent child-id offset]
-  (let [child-pos (find-child-pos-by-id parent child-id)
-        sibling-pos (+ child-pos offset)]
-    (if (and (>= sibling-pos 0) (<= sibling-pos (count-children parent)))
-      sibling-pos
-      nil)))
-
-(defn get-sibling-id-by-child-id
-  "Returns the ID of a sibling the given offset from a child. Returns nil if there 
-   is no valid sibling at the given offset."
-  [parent child-id offset]
-  (when-let [sibling-pos (get-sibling-pos-by-child-id parent child-id offset)]
-    (child-id-by-pos parent sibling-pos)))
+(defn get-child
+  "Returns the child of parent at position child-pos. If no such block exists, 
+   returns nil."
+  [parent child-pos]
+  (get-in parent [:children child-pos]))
 
 (defn insert-child
   "Return a new parent block with the child block inserted at a 
    given position."
   [parent child pos]
-  (let [partial-new-parent (set-child parent child)
-        new-pos->child-id (vec (m/insert-nth pos (:id child) (:pos->child-id parent)))
-        new-parent (assoc partial-new-parent :pos->child-id new-pos->child-id)]
-    new-parent))
+  (update parent :children #(vec (m/insert-nth pos child %))))
 
-(defn remove-child-by-id
-  "Removes a child with a given ID from a block if the child exists."
-  [parent child-id]
-  (let [child-pos (find-child-pos-by-id parent child-id)
-        new-pos->child-id (vec (m/remove-nth child-pos (:pos->child-id parent)))
-        new-child-id->child (dissoc (:child-id->child parent) child-id)
-        new-parent (assoc parent
-                          :pos->child-id new-pos->child-id
-                          :child-id->child new-child-id->child)]
-    new-parent))
+(defn remove-child
+  "Removes a child with a given position from a block if the child exists."
+  [parent child-pos]
+  (update parent :children #(vec (m/remove-nth child-pos %))))
 
 (defn get-descendant
   "Returns the block at desc-path. desc-path is followed downward from 
@@ -109,8 +68,8 @@
 (defn remove-descendant
   "Removes the block at desc-path. desc-path is followed downward from ancestor."
   [ancestor desc-path]
-  (let [[desc-parent-path desc-id] (utils/split-off-last desc-path)]
-    (update-descendant ancestor desc-parent-path remove-child-by-id desc-id)))
+  (let [[desc-parent-path desc-pos] (utils/split-off-last desc-path)]
+    (update-descendant ancestor desc-parent-path remove-child desc-pos)))
 
 (defn insert-descendant
   "Inserts a block into the block at parent-path. desc will have position pos 
@@ -131,35 +90,37 @@
 (defn move-child-inside-preceding-sibling
   "Move a child down the tree to become a grandchild, where its parent is its former 
    preceding sibling. If the child has no preceding sibling, no changes will be made."
-  [parent moving-child-id]
-  (let [stable-child-id (get-sibling-id-by-child-id parent moving-child-id -1)]
-    (if (nil? stable-child-id)
-      parent
-      (let [stable-child (child-by-id parent stable-child-id)
+  [parent moving-child-pos]
+  (let [stable-child-pos (dec moving-child-pos)]
+    (if (valid-child-pos? parent stable-child-pos) 
+      (let [stable-child (get-child parent stable-child-pos)
             new-moving-child-pos (count-children stable-child)]
-        (move-descendant parent [moving-child-id] [stable-child-id] new-moving-child-pos)))))
+        (move-descendant parent [moving-child-pos] [stable-child-pos] new-moving-child-pos))
+      parent)))
 
 (defn split-child-in-header
   "Split a child into two children at a given header position. The 
    second new child will keep the children of the original child."
-  [parent child-id header-pos]
-  (let [child (child-by-id parent child-id)
+  [parent child-pos header-pos]
+  (let [child (get-child parent child-pos)
         [new-header0 new-header1] (utils/split-str-at-pos (:header child) header-pos)
         new-child0 (->text-code-block new-header0)
         new-child1 (assoc child :header new-header1)]
     (-> parent
-        (insert-child new-child0 (find-child-pos parent child))
-        (set-child new-child1))))
+        (replace-child child-pos new-child1)
+        (insert-child new-child0 child-pos))))
 
-(defn set-child
-  "Add a new child to a parent block. The new child will not be given 
-   a position within the parent unless a child with the same ID 
-   already has a position, in which case the old child will be 
-   replaced."
-  [parent new-child]
-  (assoc-in parent [:child-id->child (:id new-child)] new-child))
+(defn replace-child
+  "Replace the child at a given position."
+  [parent child-pos new-child]
+  (assoc-in parent [:children child-pos] new-child))
 
 (defn update-header
   "Replace a block's header."
   [block new-header]
   (assoc block :header new-header))
+
+(defn valid-child-pos?
+  "Checks whether a parent has a child with position child-pos."
+  [parent child-pos]
+  (and (<= 0 child-pos) (< child-pos (count-children parent))))

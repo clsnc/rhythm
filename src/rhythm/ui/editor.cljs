@@ -1,6 +1,7 @@
 (ns rhythm.ui.editor 
   (:require [rhythm.syntax.blocks :as blocks]
-            [rhythm.ui.actions :as actions]))
+            [rhythm.ui.actions :as actions]
+            [medley.core :as m]))
 
 (declare editor-block-children)
 
@@ -28,7 +29,6 @@
 (defn- editor-block-children
   "Displays the children blocks of a block in an editor."
   [block path swap-block!]
-  (for [child (blocks/child-blocks block)]
-    (let [child-id (:id child)
-          child-path (conj path child-id)]
-      ^{:key child-id} [editor-block child child-path swap-block!])))
+  (for [[child-pos child] (m/indexed (blocks/child-blocks block))]
+    (let [child-path (conj path child-pos)]
+      ^{:key (:id child)} [editor-block child child-path swap-block!])))
