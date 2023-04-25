@@ -7,14 +7,14 @@
 
 (def state (r/atom (ast/->empty-ast)))
 
-(defn swap-block! [path op]
-  (swap! state #(ast/update-block % path op)))
+(defn swap-tree! [f & args]
+  (swap! state #(apply ast/update-tree % f args)))
 
 ;; -------------------------
 ;; Views
 
 (defn home-page []
-  [editor/editor @state swap-block!])
+  [editor/editor @state swap-tree!])
 
 ;; -------------------------
 ;; Initialize app

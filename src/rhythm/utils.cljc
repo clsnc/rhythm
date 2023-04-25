@@ -5,12 +5,6 @@
   [s]
   [(drop-last s) (last s)])
 
-(defn split-str-at-pos
-  "Splits a string s at position pos and returns a tuple of the form 
-   [s-part-1 s-part-2]."
-  [s pos]
-  [(subs s 0 pos) (subs s pos)])
-
 (defn update-root-or-in
   "Like update-in, but applies f and supplied arguments directly to m if ks is 
    empty."
@@ -18,3 +12,13 @@
   (if (empty? ks)
     (apply f m args)
     (apply update-in m ks f args)))
+
+(defn vec-concat
+  "Returns a vector that is the concatenation of the given arguments."
+  [& vs]
+  (vec (apply concat vs)))
+
+(defn vec-remove-range
+  "Returns a vector with elements with positions start <= position < end removed."
+  [v start end]
+  (vec (concat (subvec v 0 start) (subvec v end))))

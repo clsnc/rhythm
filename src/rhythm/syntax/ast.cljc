@@ -10,8 +10,7 @@
         root-block (blocks/->CodeBlock nil [empty-block] :root)]
     (->AST root-block)))
 
-(defn update-block
-  "Returns an AST with the given operation applied to the block 
-   at the given path."
-  [ast path op]
-  (update ast :root blocks/update-descendant path op))
+(defn update-tree
+  "Returns an AST with the given function and arguments applied to the root."
+  [ast f & args]
+  (update ast :root #(apply f % args)))

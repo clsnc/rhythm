@@ -2,7 +2,7 @@
   (:require [medley.core :as m]
             [rhythm.utils :as utils]))
 
-(declare ->text-code-block replace-child valid-child-pos?)
+(declare ->text-code-block count-children get-children replace-child)
 
 (defrecord CodeBlock [header children id])
 
@@ -28,6 +28,30 @@
   [block]
   (:children block))
 
+(defn replace-child
+  "Replace the child at a given position."
+  [parent child-pos new-child]
+  (assoc-in parent [:children child-pos] new-child))
+
+(defn replace-children 
+  "Replaces all of a parent block's children with a new vector of children."
+  [parent new-children]
+  (assoc parent :children new-children))
+
+(defn copy-children
+  "Copies children in a given position range in old-parent to the end of new-parent. 
+   If positions are omitted, all children will be copied."
+  ([new-parent old-parent]
+   (copy-children new-parent old-parent 0))
+  
+  ([new-parent old-parent start-pos]
+   (copy-children new-parent old-parent start-pos (count-children old-parent)))
+  
+  ([new-parent old-parent start-pos end-pos]
+   (let [copied-children (get-children old-parent start-pos end-pos)
+         combined-children (utils/vec-concat (:children new-parent) copied-children)]
+     (replace-children new-parent combined-children))))
+
 (defn count-children
   "Returns the number of children in a block."
   [block]
@@ -39,16 +63,23 @@
   [parent child-pos]
   (get-in parent [:children child-pos]))
 
-(defn insert-child
-  "Return a new parent block with the child block inserted at a 
-   given position."
-  [parent child pos]
-  (update parent :children #(vec (m/insert-nth pos child %))))
+(defn get-children
+  "Returns a vector of children in a given position range inside a parent block."
+  [parent start end]
+  (subvec (:children parent) start end))
 
-(defn remove-child
-  "Removes a child with a given position from a block if the child exists."
-  [parent child-pos]
-  (update parent :children #(vec (m/remove-nth child-pos %))))
+(defn replace-header
+  "Replace a block's header."
+  [block new-header]
+  (assoc block :header new-header))
+
+(defn remove-children
+  "Removes children in a given range of positions from a parent block."
+  ([parent remove-start-pos remove-end-pos]
+   (update parent :children utils/vec-remove-range remove-start-pos remove-end-pos)) 
+  
+  ([parent remove-start-pos]
+   (remove-children parent remove-start-pos (count-children parent))))
 
 (defn get-descendant
   "Returns the block at desc-path. desc-path is followed downward from 
@@ -65,62 +96,56 @@
   (let [desc-key-path (block-path->key-path desc-path)]
     (apply utils/update-root-or-in ancestor desc-key-path f args)))
 
-(defn remove-descendant
-  "Removes the block at desc-path. desc-path is followed downward from ancestor."
-  [ancestor desc-path]
+(defn replace-descendant
+  "Replace a descendant of ancestor at path desc-path with new-desc."
+  [ancestor desc-path new-desc]
   (let [[desc-parent-path desc-pos] (utils/split-off-last desc-path)]
-    (update-descendant ancestor desc-parent-path remove-child desc-pos)))
+    (update-descendant ancestor desc-parent-path replace-child desc-pos new-desc)))
 
-(defn insert-descendant
-  "Inserts a block into the block at parent-path. desc will have position pos 
-   within its new parent block. parent-path is followed downward from ancestor."
-  [ancestor parent-path desc pos]
-  (update-descendant ancestor parent-path insert-child desc pos))
+(defn- merge-blocks
+  "Returns a block with block0's children before b0-end-pos followed by 
+   block1's children starting with b1-start-pos. The new block will have block0's 
+   header."
+  [block0 b0-end-pos block1 b1-start-pos]
+  (-> block0
+      (remove-children b0-end-pos)
+      (copy-children block1 b1-start-pos)))
 
-(defn move-descendant
-  "Moves the block at start-path to be a child of the block at new-parent-path 
-   with position dest-pos. start-path and new-parent-path are followed downward 
-   from ancestor."
-  [ancestor start-path new-parent-path dest-pos]
-  (let [desc (get-descendant ancestor start-path)]
-    (-> ancestor
-        (remove-descendant start-path)
-        (insert-descendant new-parent-path desc dest-pos))))
-
-(defn move-child-inside-preceding-sibling
-  "Move a child down the tree to become a grandchild, where its parent is its former 
-   preceding sibling. If the child has no preceding sibling, no changes will be made."
-  [parent moving-child-pos]
-  (let [stable-child-pos (dec moving-child-pos)]
-    (if (valid-child-pos? parent stable-child-pos) 
-      (let [stable-child (get-child parent stable-child-pos)
-            new-moving-child-pos (count-children stable-child)]
-        (move-descendant parent [moving-child-pos] [stable-child-pos] new-moving-child-pos))
-      parent)))
-
-(defn split-child-in-header
-  "Split a child into two children at a given header position. The 
-   second new child will keep the children of the original child."
-  [parent child-pos header-pos]
-  (let [child (get-child parent child-pos)
-        [new-header0 new-header1] (utils/split-str-at-pos (:header child) header-pos)
-        new-child0 (->text-code-block new-header0)
-        new-child1 (assoc child :header new-header1)]
-    (-> parent
-        (replace-child child-pos new-child1)
-        (insert-child new-child0 child-pos))))
-
-(defn replace-child
-  "Replace the child at a given position."
-  [parent child-pos new-child]
-  (assoc-in parent [:children child-pos] new-child))
-
-(defn update-header
-  "Replace a block's header."
-  [block new-header]
-  (assoc block :header new-header))
-
-(defn valid-child-pos?
-  "Checks whether a parent has a child with position child-pos."
+(defn- not-nil-child&pos
+  "Returns a [child child-pos] tuple if child-pos is not nil. Returns [<empty block> 0] 
+   if child-pos is nil."
   [parent child-pos]
-  (and (<= 0 child-pos) (< child-pos (count-children parent))))
+  (if child-pos
+    [(get-child parent child-pos) child-pos]
+    [(->empty-code-block) 0]))
+
+(defn- merge-trees
+  "Slices off the portion of the tree under start-root beginning with start-path and 
+   merges it with the portion of the tree under end-root begining with end-path. Returns 
+   a single combined root."
+  [start-root start-path end-root end-path]
+  (let [[start-child-pos & start-path-rest] start-path
+        [start-child start-child-pos] (not-nil-child&pos start-root start-child-pos)
+        [end-child-pos & end-path-rest] end-path
+        [end-child end-child-pos] (not-nil-child&pos end-root end-child-pos)
+        merged-root (merge-blocks start-root start-child-pos end-root end-child-pos)]
+    (if (and (empty? start-path) (empty? end-path))
+      merged-root
+      (let [merged-child (merge-trees start-child start-path-rest end-child end-path-rest)
+            merged-tree (replace-child merged-root start-child-pos merged-child)]
+        merged-tree))))
+
+(defn replace-range
+  "Removes the portion of the tree between start-path and end-path and merges 
+   the remainder of each block on start-path with the remainder of the block of 
+   the same level originally on end-path."
+  [root start-path start-offset end-path end-offset new-text]
+  (let [start-node (get-descendant root start-path)
+        end-node (get-descendant root end-path)
+        merged-header (str (subs (:header start-node) 0 start-offset)
+                           new-text
+                           (subs (:header end-node) end-offset))
+        merged-node (replace-header end-node merged-header)]
+    (-> root
+        (merge-trees start-path root end-path)
+        (replace-descendant start-path merged-node))))

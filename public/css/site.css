@@ -4,7 +4,7 @@ html, body {
 }
 
 body {
-    background-color: lightgray;
+    background-color: darkgray;
 }
 
 .editor {
@@ -15,10 +15,13 @@ body {
     width: 100%;
 }
 
-.block-children {
-    margin-left: 40px;
+.block-header {
+    height: 1.1em;
+    width: 100%;
+    background-color: white;
+    cursor: text;
 }
 
-.text-input {
-    background-color: white;
+.block-children {
+    margin-left: 40px;
 }
