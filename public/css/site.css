@@ -20,6 +20,7 @@ body {
     width: 100%;
     background-color: white;
     cursor: text;
+    white-space: pre-wrap;
 }
 
 .block-children {
