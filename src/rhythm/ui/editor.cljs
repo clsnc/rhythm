@@ -8,13 +8,18 @@
 
 (defn editor
   "Displays an editor."
-  [tree swap-tree!]
+  [tree selection swap-editor-state!]
   [:div.editor
    {:class :editor
     :style {:display :flex
             :flex-direction :column}}
    [e/EditorRoot
-    {:onChange #(actions/handle-editor-change! % swap-tree!)}
+    {:onChange #(actions/handle-editor-change! % swap-editor-state!)
+     :onSelect #(actions/handle-editor-selection-change! % swap-editor-state!)
+     :selection (clj->js {:startPath (:start-path selection)
+                          :startOffset (:start-offset selection)
+                          :endPath (:end-path selection)
+                          :endOffset (:end-offset selection)})}
     (editor-block-children (:root tree) [])]])
 
 (defn- editor-block

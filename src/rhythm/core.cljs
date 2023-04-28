@@ -2,19 +2,21 @@
     (:require
      [reagent.core :as r]
      [reagent.dom :as d]
+     [rhythm.app-state :as app-state]
      [rhythm.ui.editor :as editor]
      [rhythm.syntax.ast :as ast]))
 
-(def state (r/atom (ast/->empty-ast)))
+(def state-atom (r/atom (app-state/->AppState (ast/->empty-ast) nil)))
 
-(defn swap-tree! [f & args]
-  (swap! state #(apply ast/update-tree % f args)))
+(defn swap-editor-state! [f & args]
+  (swap! state-atom #(apply f % args)))
 
 ;; -------------------------
 ;; Views
 
 (defn home-page []
-  [editor/editor @state swap-tree!])
+  (let [{:keys [ast selection]} @state-atom]
+    [editor/editor ast selection swap-editor-state!]))
 
 ;; -------------------------
 ;; Initialize app

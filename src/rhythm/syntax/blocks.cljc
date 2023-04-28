@@ -5,6 +5,7 @@
 (declare ->text-code-block count-children get-children replace-child)
 
 (defrecord CodeBlock [header children id])
+(defrecord CodeTreeRange [start-path start-offset end-path end-offset])
 
 (defn ->empty-code-block
   "Returns a new code block with an empty header and no children."
@@ -139,8 +140,9 @@
   "Removes the portion of the tree between start-path and end-path and merges 
    the remainder of each block on start-path with the remainder of the block of 
    the same level originally on end-path."
-  [root start-path start-offset end-path end-offset new-text]
-  (let [start-node (get-descendant root start-path)
+  [root range new-text]
+  (let [{:keys [start-path start-offset end-path end-offset]} range
+        start-node (get-descendant root start-path)
         end-node (get-descendant root end-path)
         merged-header (str (subs (:header start-node) 0 start-offset)
                            new-text

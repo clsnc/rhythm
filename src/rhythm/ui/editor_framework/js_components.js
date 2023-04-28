@@ -1,6 +1,7 @@
-import { createContext, createElement, Fragment, useContext, useEffect, useRef } from 'react'
+import { createContext, createElement, Fragment, useContext, useEffect, useRef, useState } from 'react'
 
 const EditorPathContext = createContext()
+const EditorPathJsonToDomElementObjContext = createContext()
 
 /* Represents a point in an editor. A point is any location that the caret could have. */
 class EditorPoint {
@@ -51,26 +52,66 @@ function addStartAndEndPointDataToEvent(event) {
     })
 }
 
-/* Handles an onBeforeInput event on an editor */
-function handleBeforeInput(event, handleChange) {
-    addStartAndEndPointDataToEvent(event)
-    handleChange(event)
+/* Set the selection to the given parameters if they describe a selection that is inside an editor. */
+function ensureCorrectSelection(pathJsonToDomElementObj, startPath, startOffset, endPath, endOffset) {
+    const startElement = pathJsonToDomElementObj[JSON.stringify(startPath)]
+    const endElement = pathJsonToDomElementObj[JSON.stringify(endPath)]
+
+    if(startElement && endElement) {
+        const newSelRange = document.createRange()
+        newSelRange.setStart(startElement.firstChild, startOffset)
+        newSelRange.setEnd(endElement.firstChild, endOffset)
+        const currSel = window.getSelection()
+        currSel.removeAllRanges()
+        currSel.addRange(newSelRange)
+    }
 }
 
 /* The React component for an editor root. This should be an ancestor of any EditorNode
    or Editable components. */
-export function EditorRoot({onChange, ...divProps}) {
+export function EditorRoot({onChange, onSelect, selection, ...passedDivProps}) {
+    const {
+        startPath: selStartPath,
+        startOffset: selStartOffset,
+        endPath: selEndPath,
+        endOffset: selEndOffset
+    } = selection
+    const [pathJsonToDomElementObj] = useState({})
+
+    // Set the selection in the editor to whatever is described in the selection prop.
+    useEffect(() => ensureCorrectSelection(pathJsonToDomElementObj,
+            selStartPath, selStartOffset, selEndPath, selEndOffset),
+        [pathJsonToDomElementObj, selStartPath, selStartOffset, selEndPath, selEndOffset])
+
+    // Listen for selectionchange events so the onSelect prop can be called.
+    useEffect(() => {
+        if(onSelect) {
+            const selChangeHandler = (e) => {
+                addStartAndEndPointDataToEvent(e)
+                onSelect(e)
+            }
+            document.addEventListener('selectionchange', selChangeHandler)
+            return () => document.removeEventListener('selectionchange', selChangeHandler)
+        }
+    }, [onSelect])
+
+    const divProps = {
+        ...passedDivProps,
+        contentEditable: true,
+        suppressContentEditableWarning: true
+    }
+
+    if(onChange) {
+        divProps.onBeforeInput = onChange
+    }
+
     return createElement(
         EditorPathContext.Provider,
         {value: []},
         createElement(
-            'div',
-            {
-                ...divProps,
-                contentEditable: true,
-                suppressContentEditableWarning: true,
-                onBeforeInput: (e) => handleBeforeInput(e, onChange)
-            }
+            EditorPathJsonToDomElementObjContext.Provider,
+            {value: pathJsonToDomElementObj},
+            createElement('div', divProps)
         )
     )
 }
@@ -91,12 +132,17 @@ export function EditorNode({editorId, children}) {
 /* A React component for an editable component inside an editor */
 export function Editable({value, ...divProps}) {
     const editorPath = useContext(EditorPathContext)
+    const pathJsonToDomElmementObj = useContext(EditorPathJsonToDomElementObjContext)
     const elementRef = useRef()
     useEffect(
         // Storing the editor path in the DOM element allows it to be accessed by 
         // event handlers.
-        () => elementRef.current.editorPath = editorPath,
-        [elementRef.current, editorPath]
+        () => {
+            const element = elementRef.current
+            element.editorPath = editorPath
+            pathJsonToDomElmementObj[JSON.stringify(editorPath)] = element
+        },
+        [elementRef.current, editorPath, pathJsonToDomElmementObj]
     )
     return createElement(
         EditorPathContext.Provider,
