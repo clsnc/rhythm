@@ -27,12 +27,30 @@ function domNodePositionComparator(n0, n1) {
             : -1
 }
 
+/* Computes what the offset would be in an element if it contained only the content 
+   provided to the editor in props. The content of the DOM element may be different 
+   than the provided content if there is some kind of placeholder text, such as a 
+   zero width space to improve focus behavior. */
+function editorOffsetFromDomOffset(domOffset, element) {
+    return Math.min(domOffset, element.editorValue.length)
+}
+
 /* Adds additional data about the current selection to an event for convenience */
 function addStartAndEndPointDataToEvent(event) {
     const selection = window.getSelection()
-    const {anchorNode, anchorOffset, focusNode, focusOffset} = selection
+    const {
+        anchorNode,
+        anchorOffset: domAnchorOffset,
+        focusNode,
+        focusOffset: domFocusOffset
+    } = selection
     const anchorElement = anchorNode.parentElement
     const focusElement = focusNode.parentElement
+
+    // Account for placeholder text in the DOM.
+    const anchorOffset = editorOffsetFromDomOffset(domAnchorOffset, anchorElement)
+    const focusOffset = editorOffsetFromDomOffset(domFocusOffset, focusElement)
+
     const anchorEditorPath = anchorElement.editorPath
     const focusEditorPath = focusElement.editorPath
     const anchorPoint = new EditorPoint(anchorEditorPath, anchorElement, anchorOffset)
@@ -134,22 +152,29 @@ export function Editable({value, ...divProps}) {
     const editorPath = useContext(EditorPathContext)
     const pathJsonToDomElmementObj = useContext(EditorPathJsonToDomElementObjContext)
     const elementRef = useRef()
-    useEffect(
-        // Storing the editor path in the DOM element allows it to be accessed by 
-        // event handlers.
-        () => {
-            const element = elementRef.current
-            element.editorPath = editorPath
-            pathJsonToDomElmementObj[JSON.stringify(editorPath)] = element
-        },
-        [elementRef.current, editorPath, pathJsonToDomElmementObj]
-    )
+
+    /* Storing the editor path in the DOM element allows it to be accessed by 
+       event handlers. */
+    useEffect(() => {
+        const element = elementRef.current
+        element.editorPath = editorPath
+        pathJsonToDomElmementObj[JSON.stringify(editorPath)] = element
+    }, [elementRef.current, editorPath, pathJsonToDomElmementObj])
+
+    /* Storing the intended editable value in the DOM element allows it to be 
+       accessed by event handlers. */
+    useEffect(() => elementRef.current.editorValue = value)
+
+    /* If there is no text to be rendered, render a zero width space so there 
+       is still a text node in the DOM for the browser to focus. */
+    const domValue = value.length > 0 ? value : "\u200B"
+
     return createElement(
         EditorPathContext.Provider,
         {value: editorPath},
         createElement('div', {
             ...divProps,
             ref: elementRef
-        }, value)
+        }, domValue)
     )
 }
