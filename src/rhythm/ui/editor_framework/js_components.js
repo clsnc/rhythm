@@ -1,12 +1,11 @@
-import { createContext, createElement, Fragment, useContext, useEffect, useRef, useState } from 'react'
+import { createContext, createElement, useContext, useEffect, useRef, useState } from 'react'
 
-const EditorPathContext = createContext()
-const EditorPathJsonToDomElementObjContext = createContext()
+const EditableIdJsonToDomElementObjContext = createContext()
 
 /* Represents a point in an editor. A point is any location that the caret could have. */
 class EditorPoint {
-    constructor(path, element, offset) {
-        Object.assign(this, {path, element, offset})
+    constructor(id, element, offset) {
+        Object.assign(this, {id, element, offset})
     }
 
     /* Returns whether an EditorPoint occurs before another EditorPoint. */
@@ -51,29 +50,29 @@ function addStartAndEndPointDataToEvent(event) {
     const anchorOffset = editorOffsetFromDomOffset(domAnchorOffset, anchorElement)
     const focusOffset = editorOffsetFromDomOffset(domFocusOffset, focusElement)
 
-    const anchorEditorPath = anchorElement.editorPath
-    const focusEditorPath = focusElement.editorPath
-    const anchorPoint = new EditorPoint(anchorEditorPath, anchorElement, anchorOffset)
-    const focusPoint = new EditorPoint(focusEditorPath, focusElement, focusOffset)
+    const anchorEditableId = anchorElement.editableId
+    const focusEditableId = focusElement.editableId
+    const anchorPoint = new EditorPoint(anchorEditableId, anchorElement, anchorOffset)
+    const focusPoint = new EditorPoint(focusEditableId, focusElement, focusOffset)
     const anchorIsStart = EditorPoint.isBeforeInDocument(anchorPoint, focusPoint)
     const [startPoint, endPoint] = anchorIsStart
         ? [anchorPoint, focusPoint]
         : [focusPoint, anchorPoint]
     Object.assign(event, {
-        anchorEditorPath, focusEditorPath,
-        startEditorPath: startPoint.path,
+        anchorEditableId: anchorEditableId, focusEditableId: focusEditableId,
+        startEditableId: startPoint.id,
         startElement: startPoint.element,
         startOffset: startPoint.offset,
-        endEditorPath: endPoint.path,
+        endEditableId: endPoint.id,
         endElement: endPoint.element,
         endOffset: endPoint.offset
     })
 }
 
 /* Set the selection to the given parameters if they describe a selection that is inside an editor. */
-function ensureCorrectSelection(pathJsonToDomElementObj, startPath, startOffset, endPath, endOffset) {
-    const startElement = pathJsonToDomElementObj[JSON.stringify(startPath)]
-    const endElement = pathJsonToDomElementObj[JSON.stringify(endPath)]
+function ensureCorrectSelection(idJsonToDomElementObj, startId, startOffset, endId, endOffset) {
+    const startElement = idJsonToDomElementObj[JSON.stringify(startId)]
+    const endElement = idJsonToDomElementObj[JSON.stringify(endId)]
 
     if(startElement && endElement) {
         const newSelRange = document.createRange()
@@ -89,17 +88,22 @@ function ensureCorrectSelection(pathJsonToDomElementObj, startPath, startOffset,
    or Editable components. */
 export function EditorRoot({onChange, onSelect, selection, ...passedDivProps}) {
     const {
-        startPath: selStartPath,
+        startId: selStartId,
         startOffset: selStartOffset,
-        endPath: selEndPath,
+        endId: selEndId,
         endOffset: selEndOffset
     } = selection
-    const [pathJsonToDomElementObj] = useState({})
+    
+    /* This object contains a mapping from JSON.stringify(editableId) -> DOM element. 
+       When the selection prop is updated, the editable IDs in the prop can be used 
+       with this object to access the associated DOM elements so the browser selection 
+       can be updated. */
+    const [idJsonToDomElementObj] = useState({})
 
     // Set the selection in the editor to whatever is described in the selection prop.
-    useEffect(() => ensureCorrectSelection(pathJsonToDomElementObj,
-            selStartPath, selStartOffset, selEndPath, selEndOffset),
-        [pathJsonToDomElementObj, selStartPath, selStartOffset, selEndPath, selEndOffset])
+    useEffect(() => ensureCorrectSelection(idJsonToDomElementObj,
+            selStartId, selStartOffset, selEndId, selEndOffset),
+        [idJsonToDomElementObj, selStartId, selStartOffset, selEndId, selEndOffset])
 
     // Listen for selectionchange events so the onSelect prop can be called.
     useEffect(() => {
@@ -124,42 +128,26 @@ export function EditorRoot({onChange, onSelect, selection, ...passedDivProps}) {
     }
 
     return createElement(
-        EditorPathContext.Provider,
-        {value: []},
-        createElement(
-            EditorPathJsonToDomElementObjContext.Provider,
-            {value: pathJsonToDomElementObj},
-            createElement('div', divProps)
-        )
-    )
-}
-
-/* A React component for representing editor nodes in the editor paths contained in 
-   onChange events. This accepts children but does not by itself cause anything to 
-   be added to the DOM. */
-export function EditorNode({editorId, children}) {
-    const editorParentPath = useContext(EditorPathContext)
-    const editorPath = [...editorParentPath, editorId]
-    return createElement(
-        EditorPathContext.Provider,
-        {value: editorPath},
-        createElement(Fragment, {children})
+        EditableIdJsonToDomElementObjContext.Provider,
+        {value: idJsonToDomElementObj},
+        createElement('div', divProps)
     )
 }
 
 /* A React component for an editable component inside an editor */
-export function Editable({value, ...divProps}) {
-    const editorPath = useContext(EditorPathContext)
-    const pathJsonToDomElmementObj = useContext(EditorPathJsonToDomElementObjContext)
+export function Editable({editableId, value, ...divProps}) {
+    const idJsonToDomElementObj = useContext(EditableIdJsonToDomElementObjContext)
     const elementRef = useRef()
 
-    /* Storing the editor path in the DOM element allows it to be accessed by 
+    /* Storing the editable ID in the DOM element allows it to be accessed by 
        event handlers. */
     useEffect(() => {
         const element = elementRef.current
-        element.editorPath = editorPath
-        pathJsonToDomElmementObj[JSON.stringify(editorPath)] = element
-    }, [elementRef.current, editorPath, pathJsonToDomElmementObj])
+        element.editableId = editableId
+        const jsonEditableId = JSON.stringify(editableId)
+        idJsonToDomElementObj[jsonEditableId] = element
+        return () => delete idJsonToDomElementObj[jsonEditableId]
+    }, [elementRef.current, editableId, idJsonToDomElementObj])
 
     /* Storing the intended editable value in the DOM element allows it to be 
        accessed by event handlers. */
@@ -169,12 +157,8 @@ export function Editable({value, ...divProps}) {
        is still a text node in the DOM for the browser to focus. */
     const domValue = value.length > 0 ? value : "\u200B"
 
-    return createElement(
-        EditorPathContext.Provider,
-        {value: editorPath},
-        createElement('div', {
-            ...divProps,
-            ref: elementRef
-        }, domValue)
-    )
+    return createElement('div', {
+        ...divProps,
+        ref: elementRef
+    }, domValue)
 }

@@ -16,23 +16,22 @@
    [e/EditorRoot
     {:onChange #(actions/handle-editor-change! % swap-editor-state!)
      :onSelect #(actions/handle-editor-selection-change! % swap-editor-state!)
-     :selection (clj->js {:startPath (:start-path selection)
+     :selection (clj->js {:startId (:start-path selection)
                           :startOffset (:start-offset selection)
-                          :endPath (:end-path selection)
+                          :endId (:end-path selection)
                           :endOffset (:end-offset selection)})}
     (editor-block-children (:root tree) [])]])
 
 (defn- editor-block
   "Displays a code block in an editor. This includes the header and children of the block."
   [block path]
-  (let [pos-in-parent (last path)]
-    [e/EditorNode {:editorId pos-in-parent}
-     [:div {:class :block}
-      [e/Editable
-       {:class :block-header
-        :value (:header block)}]
-      [:div {:class :block-children}
-       (editor-block-children block path)]]]))
+  [:div {:class :block}
+   [e/Editable
+    {:class :block-header
+     :editableId path
+     :value (:header block)}]
+   [:div {:class :block-children}
+    (editor-block-children block path)]])
 
 (defn- editor-block-children
   "Displays the children blocks of a block in an editor."
