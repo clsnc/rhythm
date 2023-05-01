@@ -1,4 +1,5 @@
-import { createContext, createElement, useContext, useEffect, useRef, useState } from 'react'
+import { createContext, createElement, useContext, useEffect, useLayoutEffect,
+    useRef, useState } from 'react'
 
 const EditableIdJsonToDomElementObjContext = createContext()
 
@@ -136,8 +137,9 @@ export function EditorRoot({onChange, onSelect, selection, ...passedDivProps}) {
     const startPoint = editorPointFromIdAndOffset(idJsonToDomElementObj, selStartId, selStartOffset)
     const endPoint = editorPointFromIdAndOffset(idJsonToDomElementObj, selEndId, selEndOffset)
 
-    // Set the selection in the editor to whatever is described in the selection prop.
-    useEffect(() => ensureCorrectSelection(startPoint, endPoint),
+    /* Set the selection in the editor to whatever is described in the selection prop.
+       useLayoutEffect is used here instead of useEffect to prevent caret flickering. */
+    useLayoutEffect(() => ensureCorrectSelection(startPoint, endPoint),
         [idJsonToDomElementObj, selStartId, selStartOffset, selEndId, selEndOffset])
 
     // Listen for selectionchange events so the onSelect prop can be called.
