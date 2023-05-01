@@ -8,12 +8,34 @@ class EditorPoint {
         Object.assign(this, {id, element, offset})
     }
 
+    /* Returns true if this references the same point in the editor as other. */
+    equals(other) {
+        return this.id === other.id
+            && this.element === other.element
+            && this.offset === other.offset
+    }
+
+    /* Returns a new EditorPoint referencing the location in the editor numSteps away 
+       from this point. 1 "step" is like pressing the right arrow key once. Negative 
+       steps are like pressing the left arrow key. */
+    stepsAway(numSteps) {
+        const newOffset = this.offset + numSteps
+        return new EditorPoint(this.id, this.element, newOffset)
+    }
+
     /* Returns whether an EditorPoint occurs before another EditorPoint. */
     static isBeforeInDocument(point0, point1) {
         const elementPosComparison = domNodePositionComparator(point0.element, point1.element)
         return elementPosComparison === 0
             ? point0.offset < point1.offset
             : elementPosComparison === 1
+    }
+}
+
+/* Represents a range in the editor from startPoint (inclusive) to endPoint (exclusive). */
+class EditorRange {
+    constructor(startPoint, endPoint) {
+        Object.assign(this, {startPoint, endPoint})
     }
 }
 
@@ -32,6 +54,19 @@ function domNodePositionComparator(n0, n1) {
    zero width space to improve focus behavior. */
 function editorOffsetFromDomOffset(domOffset, element) {
     return Math.min(domOffset, element.editorValue.length)
+}
+
+function editorPointFromIdAndOffset(idJsonToDomElementObj, id, offset) {
+    const element = idJsonToDomElementObj[JSON.stringify(id)]
+    return element
+        ? new EditorPoint(id, element, offset)
+        : null
+}
+
+/* Add .replaceRange (the suggested range to be replaced) and .afterRange (the suggested 
+   range to select if the suggested change is made) to a change event. */
+function addChangeRangeDataToEvent(event, replaceRange, afterRange) {
+    Object.assign(event, {replaceRange, afterRange})
 }
 
 /* Adds additional data about the current selection to an event for convenience */
@@ -70,11 +105,10 @@ function addStartAndEndPointDataToEvent(event) {
 }
 
 /* Set the selection to the given parameters if they describe a selection that is inside an editor. */
-function ensureCorrectSelection(idJsonToDomElementObj, startId, startOffset, endId, endOffset) {
-    const startElement = idJsonToDomElementObj[JSON.stringify(startId)]
-    const endElement = idJsonToDomElementObj[JSON.stringify(endId)]
-
-    if(startElement && endElement) {
+function ensureCorrectSelection(startPoint, endPoint) {
+    if(startPoint && endPoint) {
+        const {element: startElement, offset: startOffset} = startPoint
+        const {element: endElement, offset: endOffset} = endPoint
         const newSelRange = document.createRange()
         newSelRange.setStart(startElement.firstChild, startOffset)
         newSelRange.setEnd(endElement.firstChild, endOffset)
@@ -87,22 +121,23 @@ function ensureCorrectSelection(idJsonToDomElementObj, startId, startOffset, end
 /* The React component for an editor root. This should be an ancestor of any EditorNode
    or Editable components. */
 export function EditorRoot({onChange, onSelect, selection, ...passedDivProps}) {
-    const {
-        startId: selStartId,
-        startOffset: selStartOffset,
-        endId: selEndId,
-        endOffset: selEndOffset
-    } = selection
-    
     /* This object contains a mapping from JSON.stringify(editableId) -> DOM element. 
        When the selection prop is updated, the editable IDs in the prop can be used 
        with this object to access the associated DOM elements so the browser selection 
        can be updated. */
     const [idJsonToDomElementObj] = useState({})
 
+    const {
+        startId: selStartId,
+        startOffset: selStartOffset,
+        endId: selEndId,
+        endOffset: selEndOffset
+    } = selection
+    const startPoint = editorPointFromIdAndOffset(idJsonToDomElementObj, selStartId, selStartOffset)
+    const endPoint = editorPointFromIdAndOffset(idJsonToDomElementObj, selEndId, selEndOffset)
+
     // Set the selection in the editor to whatever is described in the selection prop.
-    useEffect(() => ensureCorrectSelection(idJsonToDomElementObj,
-            selStartId, selStartOffset, selEndId, selEndOffset),
+    useEffect(() => ensureCorrectSelection(startPoint, endPoint),
         [idJsonToDomElementObj, selStartId, selStartOffset, selEndId, selEndOffset])
 
     // Listen for selectionchange events so the onSelect prop can be called.
@@ -124,7 +159,27 @@ export function EditorRoot({onChange, onSelect, selection, ...passedDivProps}) {
     }
 
     if(onChange) {
-        divProps.onBeforeInput = onChange
+        divProps.onBeforeInput = (e) => {
+            const afterPoint = startPoint.stepsAway(e.data.length)
+            const replaceRange = new EditorRange(startPoint, endPoint)
+            const afterRange = new EditorRange(afterPoint, afterPoint)
+            addChangeRangeDataToEvent(e, replaceRange, afterRange)
+            onChange(e)
+        }
+        divProps.onKeyDown = (e) => {
+            if(e.key === 'Backspace') {
+                e.preventDefault()
+                const selHas0Len = startPoint.equals(endPoint)
+                const replaceStartPoint = selHas0Len
+                    ? startPoint.stepsAway(-1)
+                    : startPoint
+                const replaceRange = new EditorRange(replaceStartPoint, endPoint)
+                const afterRange = new EditorRange(replaceStartPoint, replaceStartPoint)
+                addChangeRangeDataToEvent(e, replaceRange, afterRange)
+                e.data = ''
+                onChange(e)
+            }
+        }
     }
 
     return createElement(

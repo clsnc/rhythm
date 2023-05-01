@@ -4,6 +4,11 @@
 
 (defrecord AppState [ast selection])
 
+(defn replace-state-editor-range [state change-range new-text]
+  (let [ast (:ast state)
+        new-ast (ast/update-tree ast blocks/replace-range change-range new-text)]
+    (assoc state :ast new-ast)))
+
 (defn replace-state-editor-selection
   "Replaces the portion of the state AST described by the state selection with new-text."
   [state new-text]

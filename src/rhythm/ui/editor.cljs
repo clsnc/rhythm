@@ -1,5 +1,5 @@
 (ns rhythm.ui.editor 
-  (:require [rhythm.ui.editor-framework.components :as e]
+  (:require [rhythm.ui.editor-framework.interop :as e]
             [rhythm.syntax.blocks :as blocks]
             [rhythm.ui.actions :as actions]
             [medley.core :as m]))
@@ -14,7 +14,7 @@
     :style {:display :flex
             :flex-direction :column}}
    [e/EditorRoot
-    {:onChange #(actions/handle-editor-change! % swap-editor-state!)
+    {:onChange #(actions/handle-editor-content-change! % swap-editor-state!)
      :onSelect #(actions/handle-editor-selection-change! % swap-editor-state!)
      :selection (clj->js {:startId (:start-path selection)
                           :startOffset (:start-offset selection)
