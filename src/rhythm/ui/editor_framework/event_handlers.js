@@ -1,6 +1,7 @@
 import { EditorRange, addChangeRangeDataToEvent, addSelectionRangeToEvent } from "./locations"
 
-export function handleBeforeInput(startPoint, endPoint, event, onChange) {
+export function handleBeforeInput(editorRange, event, onChange) {
+    const {startPoint, endPoint} = editorRange
     const afterPoint = startPoint.stepsAway(event.data.length)
     const replaceRange = new EditorRange(startPoint, endPoint)
     const afterRange = new EditorRange(afterPoint, afterPoint)
@@ -8,9 +9,12 @@ export function handleBeforeInput(startPoint, endPoint, event, onChange) {
     onChange(event)
 }
 
-export function handleKeyDown(startPoint, endPoint, event, onChange) {
+export function handleKeyDown(editorRange, event, onChange) {
+    const {startPoint, endPoint} = editorRange
     if(event.key === 'Backspace') {
         event.preventDefault()
+        /* If the selection has 0 length, the range to be replaced should start with the character
+           before the caret to simulate normal backspace behavior when nothing is highlighted. */
         const selHas0Len = startPoint.equals(endPoint)
         const replaceStartPoint = selHas0Len
             ? startPoint.stepsAway(-1)

@@ -24,6 +24,15 @@ export const EditorPoint = class EditorPoint {
         return new EditorPoint(this.id, this.element, newOffset)
     }
 
+    static fromDomElementAndOffset(element, offset) {
+        // Account for placeholder text in the DOM.
+        const editableOffset = editorOffsetFromDomOffset(offset, element)
+        const editableId = element.editableId
+        return editableId
+            ? new EditorPoint(editableId, element, editableOffset)
+            : null
+    }
+
     /* Returns a new EditorPoint if the given ID is an editable; otherwise returns null. */
     static fromIdAndOffset(idJsonToDomElementObj, id, offset) {
         const element = idJsonToDomElementObj[JSON.stringify(id)]
@@ -50,6 +59,42 @@ export const EditorRange = class EditorRange {
             : [focusPoint, anchorPoint]
         Object.assign(this, {anchorPoint, focusPoint, startPoint, endPoint})
     }
+
+    /* Returns a DOM Range object referencing the editable elements covered by this EditorRange. */
+    toDomRange() {
+        const {
+            anchorPoint: {
+                element: anchorElement,
+                offset: anchorOffset
+            },
+            focusPoint: {
+                element: focusElement,
+                offset: focusOffset
+            }
+        } = this
+        const domRange = document.createRange()
+        // .firstChild is used below to reference the text node inside of the editable element.
+        domRange.setStart(anchorElement.firstChild, anchorOffset)
+        domRange.setEnd(focusElement.firstChild, focusOffset)
+        return domRange
+    }
+
+    /* Returns a new EditorRange covering the editables referenced by the DOM Range object. */
+    static fromDomRange(domRange) {
+        const {
+            anchorNode,
+            anchorOffset: domAnchorOffset,
+            focusNode,
+            focusOffset: domFocusOffset
+        } = domRange
+        const anchorElement = anchorNode.parentElement
+        const focusElement = focusNode.parentElement
+        const anchorPoint = EditorPoint.fromDomElementAndOffset(anchorElement, domAnchorOffset)
+        const focusPoint = EditorPoint.fromDomElementAndOffset(focusElement, domFocusOffset)
+        return anchorPoint && focusPoint
+            ? new EditorRange(anchorPoint, focusPoint)
+            : null
+    }
 }
 
 /* Add .replaceRange (the suggested range to be replaced) and .afterRange (the suggested 
@@ -61,22 +106,5 @@ export function addChangeRangeDataToEvent(event, replaceRange, afterRange) {
 /* Adds additional data about the current selection to an event for convenience */
 export function addSelectionRangeToEvent(event) {
     const selection = window.getSelection()
-    const {
-        anchorNode,
-        anchorOffset: domAnchorOffset,
-        focusNode,
-        focusOffset: domFocusOffset
-    } = selection
-    const anchorElement = anchorNode.parentElement
-    const focusElement = focusNode.parentElement
-
-    // Account for placeholder text in the DOM.
-    const anchorOffset = editorOffsetFromDomOffset(domAnchorOffset, anchorElement)
-    const focusOffset = editorOffsetFromDomOffset(domFocusOffset, focusElement)
-
-    const anchorEditableId = anchorElement.editableId
-    const focusEditableId = focusElement.editableId
-    const anchorPoint = new EditorPoint(anchorEditableId, anchorElement, anchorOffset)
-    const focusPoint = new EditorPoint(focusEditableId, focusElement, focusOffset)
-    event.selectionRange = new EditorRange(anchorPoint, focusPoint)
+    event.selectionRange = EditorRange.fromDomRange(selection)
 }

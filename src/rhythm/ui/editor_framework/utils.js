@@ -16,15 +16,10 @@ export function editorOffsetFromDomOffset(domOffset, element) {
 }
 
 /* Set the selection to the given parameters if they describe a selection that is inside an editor. */
-export function setDomSelection(startPoint, endPoint) {
-    if(startPoint && endPoint) {
-        const {element: startElement, offset: startOffset} = startPoint
-        const {element: endElement, offset: endOffset} = endPoint
-        const newSelRange = document.createRange()
-        newSelRange.setStart(startElement.firstChild, startOffset)
-        newSelRange.setEnd(endElement.firstChild, endOffset)
+export function setDomSelection(editorRange) {
+    if(editorRange) {
         const currSel = window.getSelection()
         currSel.removeAllRanges()
-        currSel.addRange(newSelRange)
+        currSel.addRange(editorRange.toDomRange())
     }
 }

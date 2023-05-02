@@ -1,7 +1,7 @@
 import { createContext, createElement, useContext, useEffect, useLayoutEffect,
     useRef, useState } from 'react'
 
-import { EditorPoint } from './locations'
+import { EditorPoint, EditorRange } from './locations'
 import { setDomSelection } from './utils'
 import { handleBeforeInput, handleKeyDown, handleSelectionChange } from './event_handlers'
 
@@ -22,12 +22,15 @@ export function EditorRoot({onChange, onSelect, selection, ...passedDivProps}) {
         endId: selEndId,
         endOffset: selEndOffset
     } = selection
-    const startPoint = EditorPoint.fromIdAndOffset(idJsonToDomElementObj, selStartId, selStartOffset)
-    const endPoint = EditorPoint.fromIdAndOffset(idJsonToDomElementObj, selEndId, selEndOffset)
+    const selStartPoint = EditorPoint.fromIdAndOffset(idJsonToDomElementObj, selStartId, selStartOffset)
+    const selEndPoint = EditorPoint.fromIdAndOffset(idJsonToDomElementObj, selEndId, selEndOffset)
+    const selRange = selStartPoint && selEndPoint
+        ? new EditorRange(selStartPoint, selEndPoint)
+        : undefined
 
     /* Set the selection in the editor to whatever is described in the selection prop.
        useLayoutEffect is used here instead of useEffect to prevent caret flickering. */
-    useLayoutEffect(() => setDomSelection(startPoint, endPoint),
+    useLayoutEffect(() => setDomSelection(selRange),
         [idJsonToDomElementObj, selStartId, selStartOffset, selEndId, selEndOffset])
 
     // Listen for selectionchange events so the onSelect prop can be called.
@@ -46,8 +49,8 @@ export function EditorRoot({onChange, onSelect, selection, ...passedDivProps}) {
     }
 
     if(onChange) {
-        divProps.onBeforeInput = (e) => handleBeforeInput(startPoint, endPoint, e, onChange)
-        divProps.onKeyDown = (e) => handleKeyDown(startPoint, endPoint, e, onChange)
+        divProps.onBeforeInput = (e) => handleBeforeInput(selRange, e, onChange)
+        divProps.onKeyDown = (e) => handleKeyDown(selRange, e, onChange)
     }
 
     return createElement(
