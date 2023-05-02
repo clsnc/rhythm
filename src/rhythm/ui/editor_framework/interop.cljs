@@ -1,7 +1,7 @@
 (ns rhythm.ui.editor-framework.interop
   [:require
-   ["./js_components" :rename {EditorRoot jsEditorRoot
-                               Editable jsEditable}]
+   ["./components" :rename {EditorRoot jsEditorRoot
+                            Editable jsEditable}]
    [reagent.core :as r]
    [rhythm.syntax.blocks :as blocks]])
 
