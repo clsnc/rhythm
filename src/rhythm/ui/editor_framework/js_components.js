@@ -35,8 +35,12 @@ class EditorPoint {
 
 /* Represents a range in the editor from startPoint (inclusive) to endPoint (exclusive). */
 class EditorRange {
-    constructor(startPoint, endPoint) {
-        Object.assign(this, {startPoint, endPoint})
+    constructor(anchorPoint, focusPoint) {
+        const anchorIsStart = EditorPoint.isBeforeInDocument(anchorPoint, focusPoint)
+        const [startPoint, endPoint] = anchorIsStart
+            ? [anchorPoint, focusPoint]
+            : [focusPoint, anchorPoint]
+        Object.assign(this, {anchorPoint, focusPoint, startPoint, endPoint})
     }
 }
 
@@ -71,7 +75,7 @@ function addChangeRangeDataToEvent(event, replaceRange, afterRange) {
 }
 
 /* Adds additional data about the current selection to an event for convenience */
-function addStartAndEndPointDataToEvent(event) {
+function addSelectionRangeToEvent(event) {
     const selection = window.getSelection()
     const {
         anchorNode,
@@ -90,19 +94,7 @@ function addStartAndEndPointDataToEvent(event) {
     const focusEditableId = focusElement.editableId
     const anchorPoint = new EditorPoint(anchorEditableId, anchorElement, anchorOffset)
     const focusPoint = new EditorPoint(focusEditableId, focusElement, focusOffset)
-    const anchorIsStart = EditorPoint.isBeforeInDocument(anchorPoint, focusPoint)
-    const [startPoint, endPoint] = anchorIsStart
-        ? [anchorPoint, focusPoint]
-        : [focusPoint, anchorPoint]
-    Object.assign(event, {
-        anchorEditableId: anchorEditableId, focusEditableId: focusEditableId,
-        startEditableId: startPoint.id,
-        startElement: startPoint.element,
-        startOffset: startPoint.offset,
-        endEditableId: endPoint.id,
-        endElement: endPoint.element,
-        endOffset: endPoint.offset
-    })
+    event.selectionRange = new EditorRange(anchorPoint, focusPoint)
 }
 
 /* Set the selection to the given parameters if they describe a selection that is inside an editor. */
@@ -139,14 +131,16 @@ export function EditorRoot({onChange, onSelect, selection, ...passedDivProps}) {
 
     /* Set the selection in the editor to whatever is described in the selection prop.
        useLayoutEffect is used here instead of useEffect to prevent caret flickering. */
-    useLayoutEffect(() => ensureCorrectSelection(startPoint, endPoint),
+    useLayoutEffect(() => {
+        ensureCorrectSelection(startPoint, endPoint)
+    },
         [idJsonToDomElementObj, selStartId, selStartOffset, selEndId, selEndOffset])
 
     // Listen for selectionchange events so the onSelect prop can be called.
     useEffect(() => {
         if(onSelect) {
             const selChangeHandler = (e) => {
-                addStartAndEndPointDataToEvent(e)
+                addSelectionRangeToEvent(e)
                 onSelect(e)
             }
             document.addEventListener('selectionchange', selChangeHandler)
