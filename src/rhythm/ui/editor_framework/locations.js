@@ -1,8 +1,6 @@
 /* The classes in this file are declared with "const <ClassName> = class <ClassName>" because 
    they do not seem to get referenced correctly from other files with just "class <ClassName>". */
 
-import { domNodePositionComparator, editorOffsetFromDomOffset } from "./utils"
-
 /* Represents a point in an editor. A point is any location that the caret could have. */
 export const EditorPoint = class EditorPoint {
     constructor(id, element, offset) {
@@ -60,6 +58,12 @@ export const EditorRange = class EditorRange {
         Object.assign(this, {anchorPoint, focusPoint, startPoint, endPoint})
     }
 
+    /* Returns true if this references the same range in the editor as other. */
+    equals(other) {
+        return this.anchorPoint.equals(other.anchorPoint)
+            && this.focusPoint.equals(other.focusPoint)
+    }
+
     /* Returns a DOM Range object referencing the editable elements covered by this EditorRange. */
     toDomRange() {
         const {
@@ -107,4 +111,21 @@ export function addChangeRangeDataToEvent(event, replaceRange, afterRange) {
 export function addSelectionRangeToEvent(event) {
     const selection = window.getSelection()
     event.selectionRange = EditorRange.fromDomRange(selection)
+}
+
+/* A position comparator for DOM nodes in the document */
+export function domNodePositionComparator(n0, n1) {
+    return n0 === n1
+        ? 0
+        : n0.compareDocumentPosition(n1) & Node.DOCUMENT_POSITION_FOLLOWING
+            ? 1
+            : -1
+}
+
+/* Computes what the offset would be in an element if it contained only the content 
+   provided to the editor in props. The content of the DOM element may be different 
+   than the provided content if there is some kind of placeholder text, such as a 
+   zero width space to improve focus behavior. */
+export function editorOffsetFromDomOffset(domOffset, element) {
+    return Math.min(domOffset, element.editorValue.length)
 }
