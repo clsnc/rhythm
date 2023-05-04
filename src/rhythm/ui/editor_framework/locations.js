@@ -3,14 +3,26 @@
 
 /* Represents a point in an editor. A point is any location that the caret could have. */
 export const EditorPoint = class EditorPoint {
-    constructor(id, element, offset) {
-        Object.assign(this, {id, element, offset})
+    constructor(idJsonToDomElementObj, id, offset) {
+        const idStr = JSON.stringify(id)
+        Object.assign(this, {idJsonToDomElementObj, id, idStr, offset})
+    }
+
+    /* Returns the DOM element that currently has the editable ID of this EditorPoint. If there 
+       is none currently, undefined is returned. */
+    currentElement() {
+        return this.idJsonToDomElementObj[this.idStr]
+    }
+
+    /* Returns true if the EditorPoint currently exists in the editor. */
+    currentlyExists() {
+        return Boolean(this.currentElement())
     }
 
     /* Returns true if this references the same point in the editor as other. */
     equals(other) {
-        return this.id === other.id
-            && this.element === other.element
+        return this.idJsonToDomElementObj === other.idJsonToDomElementObj
+            && this.idStr === other.idStr
             && this.offset === other.offset
     }
 
@@ -19,29 +31,28 @@ export const EditorPoint = class EditorPoint {
        steps are like pressing the left arrow key. */
     stepsAway(numSteps) {
         const newOffset = this.offset + numSteps
-        return new EditorPoint(this.id, this.element, newOffset)
+        return new EditorPoint(this.idJsonToDomElementObj, this.id, newOffset)
     }
 
     static fromDomElementAndOffset(element, offset) {
-        // Account for placeholder text in the DOM.
-        const editableOffset = editorOffsetFromDomOffset(offset, element)
-        const editableId = element.editableId
-        return editableId
-            ? new EditorPoint(editableId, element, editableOffset)
-            : null
+        const {idJsonToDomElementObj, editableId} = element
+        if(editableId) {
+            // Account for placeholder text in the DOM.
+            const editableOffset = editorOffsetFromDomOffset(offset, element)
+            return new EditorPoint(idJsonToDomElementObj, editableId, editableOffset)
+        } else {
+            return null
+        }
     }
 
-    /* Returns a new EditorPoint if the given ID is an editable; otherwise returns null. */
+    /* Returns a new EditorPoint. */
     static fromIdAndOffset(idJsonToDomElementObj, id, offset) {
-        const element = idJsonToDomElementObj[JSON.stringify(id)]
-        return element
-            ? new EditorPoint(id, element, offset)
-            : null
+        return new EditorPoint(idJsonToDomElementObj, id, offset)
     }
 
     /* Returns whether an EditorPoint occurs before another EditorPoint. */
     static isBeforeInDocument(point0, point1) {
-        const elementPosComparison = domNodePositionComparator(point0.element, point1.element)
+        const elementPosComparison = domNodePositionComparator(point0.currentElement(), point1.currentElement())
         return elementPosComparison === 0
             ? point0.offset < point1.offset
             : elementPosComparison === 1
@@ -51,11 +62,20 @@ export const EditorPoint = class EditorPoint {
 /* Represents a range in the editor from startPoint (inclusive) to endPoint (exclusive). */
 export const EditorRange = class EditorRange {
     constructor(anchorPoint, focusPoint) {
+        const pointsAreSame = anchorPoint.equals(focusPoint)
         const anchorIsStart = EditorPoint.isBeforeInDocument(anchorPoint, focusPoint)
         const [startPoint, endPoint] = anchorIsStart
             ? [anchorPoint, focusPoint]
             : [focusPoint, anchorPoint]
-        Object.assign(this, {anchorPoint, focusPoint, startPoint, endPoint})
+        Object.assign(this, {anchorPoint, focusPoint, startPoint, endPoint, pointsAreSame})
+    }
+
+    /* Returns true if both the start and end EditorPoints currently exist in order in the editor. */
+    currentlyExists() {
+        return this.anchorPoint.currentlyExists()
+            && (this.pointsAreSame
+                || (this.focusPoint.currentlyExists()
+                    && EditorPoint.isBeforeInDocument(this.startPoint, this.endPoint)))
     }
 
     /* Returns true if this references the same range in the editor as other. */
@@ -66,16 +86,10 @@ export const EditorRange = class EditorRange {
 
     /* Returns a DOM Range object referencing the editable elements covered by this EditorRange. */
     toDomRange() {
-        const {
-            anchorPoint: {
-                element: anchorElement,
-                offset: anchorOffset
-            },
-            focusPoint: {
-                element: focusElement,
-                offset: focusOffset
-            }
-        } = this
+        const anchorElement = this.anchorPoint.currentElement()
+        const focusElement = this.focusPoint.currentElement()
+        const anchorOffset = this.anchorPoint.offset
+        const focusOffset = this.focusPoint.offset
         const domRange = document.createRange()
         // .firstChild is used below to reference the text node inside of the editable element.
         domRange.setStart(anchorElement.firstChild, anchorOffset)

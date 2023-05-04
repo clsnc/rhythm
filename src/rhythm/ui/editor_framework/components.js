@@ -24,14 +24,15 @@ export function EditorRoot({onChange, onSelect, selection, ...passedDivProps}) {
     } = selection
     const selStartPoint = EditorPoint.fromIdAndOffset(idJsonToDomElementObj, selStartId, selStartOffset)
     const selEndPoint = EditorPoint.fromIdAndOffset(idJsonToDomElementObj, selEndId, selEndOffset)
-    const selRange = selStartPoint && selEndPoint
-        ? new EditorRange(selStartPoint, selEndPoint)
-        : undefined
+    const selRange = new EditorRange(selStartPoint, selEndPoint)
 
     /* Set the selection in the editor to whatever is described in the selection prop.
        useLayoutEffect is used here instead of useEffect to prevent caret flickering. */
-    useLayoutEffect(() => setDomSelection(selRange),
-        [idJsonToDomElementObj, selStartId, selStartOffset, selEndId, selEndOffset])
+    useLayoutEffect(() => {
+        if(selRange.currentlyExists()) {
+            setDomSelection(selRange)
+        }
+    }, [idJsonToDomElementObj, selStartId, selStartOffset, selEndId, selEndOffset])
 
     // Listen for selectionchange events so the onSelect prop can be called.
     useEffect(() => {
@@ -65,11 +66,11 @@ export function Editable({editableId, value, ...divProps}) {
     const idJsonToDomElementObj = useContext(EditableIdJsonToDomElementObjContext)
     const elementRef = useRef()
 
-    /* Storing the editable ID in the DOM element allows it to be accessed by 
-       event handlers. */
+    /* Storing the editable ID and ID -> element map object in the DOM element allows 
+       an EditorPoint to be derived from a DOM element and an offset. */
     useEffect(() => {
         const element = elementRef.current
-        element.editableId = editableId
+        Object.assign(element, {idJsonToDomElementObj, editableId})
         const jsonEditableId = JSON.stringify(editableId)
         idJsonToDomElementObj[jsonEditableId] = element
         return () => delete idJsonToDomElementObj[jsonEditableId]
