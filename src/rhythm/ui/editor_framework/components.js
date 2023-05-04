@@ -67,8 +67,10 @@ export function Editable({editableId, value, ...divProps}) {
     const elementRef = useRef()
 
     /* Storing the editable ID and ID -> element map object in the DOM element allows 
-       an EditorPoint to be derived from a DOM element and an offset. */
-    useEffect(() => {
+       an EditorPoint to be derived from a DOM element and an offset. useLayoutEffect is 
+       used here instead of useEffect because this Effect must run before the LayoutEffect 
+       of the ancestor Editor component that updates the window selection. */
+    useLayoutEffect(() => {
         const element = elementRef.current
         Object.assign(element, {idJsonToDomElementObj, editableId})
         const jsonEditableId = JSON.stringify(editableId)
