@@ -80,7 +80,7 @@ export function Editable({editableId, value, ...divProps}) {
 
     /* Storing the intended editable value in the DOM element allows it to be 
        accessed by event handlers. */
-    useEffect(() => elementRef.current.editorValue = value)
+    useEffect(() => elementRef.current.editorValue = value, [elementRef.current, value])
 
     /* If there is no text to be rendered, render a zero width space so there 
        is still a text node in the DOM for the browser to focus. */
