@@ -1,5 +1,10 @@
 (ns rhythm.utils)
 
+(defn assoc-last
+  "Calls assoc on the last element of a vector."
+  [v val]
+  (assoc v (dec (count v)) val))
+
 (defn split-off-last
   "Returns the a tuple of the form [seq-of-all-but-last-element last-element]."
   [s]

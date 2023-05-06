@@ -1,16 +1,30 @@
 (ns rhythm.ui.actions
   (:require [rhythm.ui.editor-framework.interop :as interop]
-            [rhythm.app-state :as app-state]))
+            [rhythm.app-state :as app-state]
+            [rhythm.syntax.blocks :as blocks]))
+
+(defn- change-data->new-selection [suggested-selection replace-range new-blocks]
+  (let [num-new-blocks (count new-blocks)]
+    (if (= num-new-blocks 1)
+      suggested-selection
+      ;; If multiple blocks are being inserted, the suggested selection is probably wrong.
+      (let [replace-end-path (:end-path replace-range)
+            new-selection-path (blocks/step-path-end replace-end-path (dec num-new-blocks))
+            new-selection-offset (count (:header (last new-blocks)))]
+        (blocks/->CodeTreeRange new-selection-path new-selection-offset
+                                new-selection-path new-selection-offset)))))
 
 (defn handle-editor-content-change!
   "Handles on onChange event from an editor."
   [event swap-editor-state!]
   (.preventDefault event)
   (let [replace-range (interop/jsEditorRange->CodeTreeRange (.-replaceRange event))
-        new-selection (interop/jsEditorRange->CodeTreeRange (.-afterRange event))
-        new-text (.-data event)]
+        suggested-selection (interop/jsEditorRange->CodeTreeRange (.-afterRange event))
+        new-text (.-data event)
+        new-blocks (blocks/text->blocks new-text)
+        new-selection (change-data->new-selection suggested-selection replace-range new-blocks)]
     (swap-editor-state! #(-> %
-                             (app-state/replace-state-editor-range replace-range new-text)
+                             (app-state/replace-state-editor-range replace-range new-blocks)
                              (app-state/replace-selection new-selection)))))
 
 (defn handle-editor-selection-change!
