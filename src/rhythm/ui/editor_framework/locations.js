@@ -1,6 +1,16 @@
 /* The classes in this file are declared with "const <ClassName> = class <ClassName>" because 
    they do not seem to get referenced correctly from other files with just "class <ClassName>". */
 
+import { findPreviousMatchingDomNode } from "./dom_search"
+
+function isEditable(element) {
+    return Boolean(element.isEditable)
+}
+
+function isEditor(element) {
+    return Boolean(element.isEditor)
+}
+
 /* Represents a point in an editor. A point is any location that the caret could have. */
 export const EditorPoint = class EditorPoint {
     constructor(idJsonToDomElementObj, id, offset) {
@@ -31,7 +41,19 @@ export const EditorPoint = class EditorPoint {
        steps are like pressing the left arrow key. */
     stepsAway(numSteps) {
         const newOffset = this.offset + numSteps
-        return new EditorPoint(this.idJsonToDomElementObj, this.id, newOffset)
+        if(newOffset >= 0) {
+            // For 0 or positive offsets, return a new point inside the current Editable.
+            return new EditorPoint(this.idJsonToDomElementObj, this.id, newOffset)
+        } else {
+            // For negative offsets, return a point at the end of the previous Editable.
+            const prevEditable = findPreviousMatchingDomNode(
+                this.currentElement(), isEditable, isEditor)
+            return prevEditable
+                ? EditorPoint.fromDomElementAndOffset(prevEditable, prevEditable.editorValue.length)
+                /* If there is no previous Editable, return a point at the beginning of the current 
+                   Editable. */
+                : new EditorPoint(this.idJsonToDomElementObj, this.id, 0)
+        }
     }
 
     static fromDomElementAndOffset(element, offset) {

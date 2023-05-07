@@ -25,6 +25,10 @@ export function EditorRoot({onChange, onSelect, selection, ...passedDivProps}) {
     const selStartPoint = EditorPoint.fromIdAndOffset(idJsonToDomElementObj, selStartId, selStartOffset)
     const selEndPoint = EditorPoint.fromIdAndOffset(idJsonToDomElementObj, selEndId, selEndOffset)
     const selRange = new EditorRange(selStartPoint, selEndPoint)
+    const elementRef = useRef()
+
+    // Leave a marker on the editor root DOM element so it can be identified.
+    useEffect(() => elementRef.current.isEditor = true)
 
     /* Set the selection in the editor to whatever is described in the selection prop.
        useLayoutEffect is used here instead of useEffect to prevent caret flickering. */
@@ -45,6 +49,7 @@ export function EditorRoot({onChange, onSelect, selection, ...passedDivProps}) {
 
     const divProps = {
         ...passedDivProps,
+        ref: elementRef,
         contentEditable: true,
         suppressContentEditableWarning: true
     }
@@ -81,6 +86,9 @@ export function Editable({editableId, value, ...divProps}) {
     /* Storing the intended editable value in the DOM element allows it to be 
        accessed by event handlers. */
     useEffect(() => elementRef.current.editorValue = value, [elementRef.current, value])
+
+    // Leave a marker on the Editable DOM element so it can be identified.
+    useEffect(() => elementRef.current.isEditable = true)
 
     /* If there is no text to be rendered, render a zero width space so there 
        is still a text node in the DOM for the browser to focus. */
