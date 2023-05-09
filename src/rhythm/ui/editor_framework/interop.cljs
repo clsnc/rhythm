@@ -8,14 +8,14 @@
 (def EditorRoot (r/adapt-react-class jsEditorRoot))
 (def Editable (r/adapt-react-class jsEditable))
 
-(defn jsEditorPoint->editableId+offset
+(defn jsEditorPoint->CodeTreePoint
   "Returns a tuple of [path offset] from an EditorPoint."
   [js-point]
-  [(.-id js-point) (.-offset js-point)])
+  (blocks/->CodeTreePoint (.-id js-point) (.-offset js-point)))
 
 (defn jsEditorRange->CodeTreeRange
   "Returns a CodeTreeRange from an EditorRange."
   [js-range]
-  (let [[start-path start-offset] (jsEditorPoint->editableId+offset (.-startPoint js-range))
-        [end-path end-offset] (jsEditorPoint->editableId+offset (.-endPoint js-range))]
-    (blocks/->CodeTreeRange start-path start-offset end-path end-offset)))
+  (let [start-point (jsEditorPoint->CodeTreePoint (.-startPoint js-range))
+        end-point (jsEditorPoint->CodeTreePoint (.-endPoint js-range))]
+    (blocks/->CodeTreeRange start-point end-point)))

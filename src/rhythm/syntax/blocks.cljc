@@ -6,7 +6,8 @@
 (declare ->text-code-block count-children get-children replace-child)
 
 (defrecord CodeBlock [header children id])
-(defrecord CodeTreeRange [start-path start-offset end-path end-offset])
+(defrecord CodeTreePoint [path offset])
+(defrecord CodeTreeRange [start-point end-point])
 
 (defn ->empty-code-block
   "Returns a new code block with an empty header and no children."
@@ -204,7 +205,10 @@
    the same level originally on end-path."
   [root range new-nodes]
   (let [new-nodes (vec new-nodes)
-        {:keys [start-path start-offset end-path end-offset]} range
+        {{start-path :path
+          start-offset :offset} :start-point
+         {end-path :path
+          end-offset :offset} :end-point} range
         start-node (get-descendant root start-path)
         end-node (get-descendant root end-path)
         new-combined-nodes (merge-outer-nodes start-node start-offset new-nodes end-node end-offset)]

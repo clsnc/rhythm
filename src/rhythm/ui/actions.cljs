@@ -8,11 +8,11 @@
     (if (= num-new-blocks 1)
       suggested-selection
       ;; If multiple blocks are being inserted, the suggested selection is probably wrong.
-      (let [replace-end-path (:end-path replace-range)
+      (let [replace-end-path (:path (:end-point replace-range))
             new-selection-path (blocks/step-path-end replace-end-path (dec num-new-blocks))
-            new-selection-offset (count (:header (last new-blocks)))]
-        (blocks/->CodeTreeRange new-selection-path new-selection-offset
-                                new-selection-path new-selection-offset)))))
+            new-selection-offset (count (:header (last new-blocks)))
+            new-selection-point (blocks/->CodeTreePoint new-selection-path new-selection-offset)]
+        (blocks/->CodeTreeRange new-selection-point new-selection-point)))))
 
 (defn handle-editor-content-change!
   "Handles on onChange event from an editor."

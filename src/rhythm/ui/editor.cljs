@@ -16,10 +16,10 @@
    [e/EditorRoot
     {:onChange #(actions/handle-editor-content-change! % swap-editor-state!)
      :onSelect #(actions/handle-editor-selection-change! % swap-editor-state!)
-     :selection (clj->js {:startId (:start-path selection)
-                          :startOffset (:start-offset selection)
-                          :endId (:end-path selection)
-                          :endOffset (:end-offset selection)})}
+     :selection (clj->js {:startId (:path (:start-point selection))
+                          :startOffset (:offset (:start-point selection))
+                          :endId (:path (:end-point selection))
+                          :endOffset (:offset (:end-point selection))})}
     (editor-block-children (:root tree) [])]])
 
 (defn- editor-block
