@@ -5,7 +5,7 @@
    [reagent.core :as r]
    [rhythm.syntax.blocks :as blocks]])
 
-(def EditorRoot (r/adapt-react-class jsEditorRoot))
+(def AdaptedJsEditorRoot (r/adapt-react-class jsEditorRoot))
 (def Editable (r/adapt-react-class jsEditable))
 
 (defn jsEditorPoint->CodeTreePoint
@@ -19,3 +19,20 @@
   (let [start-point (jsEditorPoint->CodeTreePoint (.-startPoint js-range))
         end-point (jsEditorPoint->CodeTreePoint (.-endPoint js-range))]
     (blocks/->CodeTreeRange start-point end-point)))
+
+(defn- CodeTreeRange->js-selection-prop [ctr]
+  (let [{{start-path :path
+          start-offset :offset} :start-point
+         {end-path :path
+          end-offset :offset} :end-point} ctr]
+    (clj->js {:startId start-path
+              :startOffset start-offset
+              :endId end-path
+              :endOffset end-offset})))
+
+(defn EditorRoot [props children]
+  (let [selection (:selection props)
+        jsProps (assoc props
+                       :children (r/as-element children)
+                       :selection (CodeTreeRange->js-selection-prop selection))]
+   [AdaptedJsEditorRoot jsProps]))
