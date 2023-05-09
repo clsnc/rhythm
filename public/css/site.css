@@ -1,14 +1,27 @@
+@import url('https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600&display=swap');
+
 html, body {
     padding: 0;
     margin: 0;
 }
 
 body {
-    background-color: darkgray;
+    font-size: 12pt;
+    background-color: #0a0a0a;
+    background-size: 20px 20px;
+    background-image: radial-gradient(circle, #2f2f2f 1px, rgba(0, 0, 0, 0) 1px);
+    padding: 30px;
 }
 
 .editor {
-    width: 100%;
+    box-sizing: border-box;
+    width: 400px;
+    padding: 15px;
+    background-color: #202020;
+    color: white;
+    font-family: 'Source Sans 3', sans-serif;
+    font-size: 1.1em;
+    box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
 }
 
 .block {
@@ -16,11 +29,12 @@ body {
 }
 
 .block-header {
-    height: 1.1em;
+    height: 1.5em;
+    line-height: 1.5em;
     width: 100%;
-    background-color: white;
     cursor: text;
     white-space: pre-wrap;
+    outline: none;
 }
 
 .block-children {
