@@ -1,7 +1,9 @@
 (ns rhythm.ui.editor 
-  (:require [rhythm.ui.editor-framework.interop :as e]
+  (:require [rhythm.ui.motion :as motion]
+            [rhythm.ui.editor-framework.interop :as e]
             [rhythm.syntax.blocks :as blocks]
             [rhythm.ui.actions :as actions]
+            [rhythm.ui.ui-utils :as ui-utils]
             [medley.core :as m]))
 
 (declare editor-block-children)
@@ -9,13 +11,17 @@
 (defn editor
   "Displays an editor."
   [tree selection swap-editor-state!]
-  [:div.editor
-   {:class :editor
-    :style {:display :flex
-            :flex-direction :column}}
+  [motion/div
+   {:class :editor-pane
+    :drag true
+    :dragMomentum false}
    [e/EditorRoot
-    {:onChange #(actions/handle-editor-content-change! % swap-editor-state!)
+    {:class :editor
+     :style {:display :flex
+             :flex-direction :column}
+     :onChange #(actions/handle-editor-content-change! % swap-editor-state!)
      :onSelect #(actions/handle-editor-selection-change! % swap-editor-state!)
+     :onPointerDownCapture ui-utils/stop-propagation!
      :selection selection}
     (editor-block-children (:root tree) [])]])
 
