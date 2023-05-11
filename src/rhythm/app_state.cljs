@@ -1,28 +1,20 @@
 (ns rhythm.app-state
-  (:require [rhythm.syntax.ast :as ast]
+  (:require [rhythm.panes :as panes]
+            [rhythm.syntax.ast :as ast]
             [rhythm.syntax.blocks :as blocks]))
 
-(defrecord AppState [ast selection])
+(defrecord AppState [ast pane-id->pane selection])
+
+(defn ->single-empty-pane-state
+  "Returns an AppState with a single pane with 1 empty line."
+  []
+  (let [pane (panes/->new-pane [0])]
+    (->AppState (ast/->empty-ast) {(:id pane) pane} nil)))
 
 (defn replace-state-editor-range [state change-range new-blocks]
   (let [ast (:ast state)
         new-ast (ast/update-tree ast blocks/replace-range change-range new-blocks)]
     (assoc state :ast new-ast)))
-
-(defn replace-state-editor-selection
-  "Replaces the portion of the state AST described by the state selection with new-text."
-  [state new-text]
-  (let [{:keys [ast selection]} state
-        new-ast (ast/update-tree ast blocks/replace-range selection new-text)
-        {:keys [start-path start-offset]} selection
-        new-caret-offset (+ start-offset (count new-text))
-        new-selection (assoc selection
-                             :start-offset new-caret-offset
-                             :end-path start-path
-                             :end-offset new-caret-offset)]
-    (assoc state
-           :ast new-ast
-           :selection new-selection)))
 
 (defn replace-selection
   "Replaces a state's selection."
