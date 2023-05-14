@@ -28,7 +28,7 @@ export function EditorRoot({onChange, onSelect, selection, ...passedDivProps}) {
     const elementRef = useRef()
 
     // Leave a marker on the editor root DOM element so it can be identified.
-    useEffect(() => elementRef.current.isEditor = true)
+    useEffect(() => { elementRef.current.isEditor = true })
 
     /* Set the selection in the editor to whatever is described in the selection prop.
        useLayoutEffect is used here instead of useEffect to prevent caret flickering. */
@@ -43,7 +43,7 @@ export function EditorRoot({onChange, onSelect, selection, ...passedDivProps}) {
         if(onSelect) {
             const selChangeHandler = (e) => handleSelectionChange(e, onSelect)
             document.addEventListener('selectionchange', selChangeHandler)
-            return () => document.removeEventListener('selectionchange', selChangeHandler)
+            return () => { document.removeEventListener('selectionchange', selChangeHandler) }
         }
     }, [onSelect])
 
@@ -80,15 +80,15 @@ export function Editable({editableId, value, ...divProps}) {
         Object.assign(element, {idJsonToDomElementObj, editableId})
         const jsonEditableId = JSON.stringify(editableId)
         idJsonToDomElementObj[jsonEditableId] = element
-        return () => delete idJsonToDomElementObj[jsonEditableId]
+        return () => { delete idJsonToDomElementObj[jsonEditableId] }
     }, [elementRef.current, editableId, idJsonToDomElementObj])
 
     /* Storing the intended editable value in the DOM element allows it to be 
        accessed by event handlers. */
-    useEffect(() => elementRef.current.editorValue = value, [elementRef.current, value])
+    useEffect(() => { elementRef.current.editorValue = value }, [elementRef.current, value])
 
     // Leave a marker on the Editable DOM element so it can be identified.
-    useEffect(() => elementRef.current.isEditable = true)
+    useEffect(() => { elementRef.current.isEditable = true })
 
     /* If there is no text to be rendered, render a zero width space so there 
        is still a text node in the DOM for the browser to focus. */
