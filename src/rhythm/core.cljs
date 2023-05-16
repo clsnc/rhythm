@@ -1,7 +1,7 @@
 (ns rhythm.core
     (:require
      [reagent.core :as r]
-     [reagent.dom :as d]
+     [reagent.dom.client :as d]
      [rhythm.app-state :as app-state]
      [rhythm.syntax.blocks :as blocks]
      [rhythm.ui.actions :as actions]
@@ -35,8 +35,10 @@
 ;; -------------------------
 ;; Initialize app
 
+(defonce app-root (d/create-root (.getElementById js/document "app")))
+
 (defn mount-root []
-  (d/render [home-page] (.getElementById js/document "app")))
+  (d/render app-root [home-page]))
 
 (defn ^:export init! []
   (mount-root))
