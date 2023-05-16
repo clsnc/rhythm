@@ -196,12 +196,21 @@
   (let [first-inner-node (first inner-nodes)
         combined-start-header (str (subs (:header start-node) 0 start-offset)
                                    (:header first-inner-node))
-        combined-first-node (replace-header first-inner-node combined-start-header)
+        combined-first-node (-> start-node
+                                (replace-header combined-start-header)
+                                (replace-children (:children first-inner-node)))
         combined-start-inner-nodes (assoc inner-nodes 0 combined-first-node)
         last-inner-node (last combined-start-inner-nodes)
         combined-end-header (str (:header last-inner-node)
                                  (subs (:header end-node) end-offset))
-        combined-last-node (replace-header end-node combined-end-header)
+        combined-last-node (if (= start-node end-node)
+                             ;; If the start and end nodes are the same, base the new end 
+                             ;; node off of the last inner node so the new start and end 
+                             ;; nodes don't have the same ID.
+                             (-> last-inner-node
+                                 (replace-header combined-end-header)
+                                 (replace-children (:children end-node)))
+                             (replace-header end-node combined-end-header))
         combined-nodes (utils/assoc-last combined-start-inner-nodes combined-last-node)]
     combined-nodes))
 

@@ -27,10 +27,10 @@
 
 (defn editor-pane
   "Displays an editor pane containing the text representation of code-subtree."
-  [pane code-subtree]
+  [code-subtree-root code-path]
   [motion/div
    {:class :editor-pane
     :drag true
     :dragMomentum false}
    [:div {:onPointerDownCapture ui-utils/stop-propagation!}
-    [editor-block code-subtree (:code-path pane)]]])
+    [editor-block code-subtree-root code-path]]])

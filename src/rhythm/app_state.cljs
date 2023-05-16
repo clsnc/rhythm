@@ -1,15 +1,13 @@
 (ns rhythm.app-state
-  (:require [rhythm.panes :as panes]
-            [rhythm.syntax.ast :as ast]
+  (:require [rhythm.syntax.ast :as ast]
             [rhythm.syntax.blocks :as blocks]))
 
-(defrecord AppState [ast pane-id->pane selection])
+(defrecord AppState [ast selection])
 
-(defn ->single-empty-pane-state
+(defn ->start-state
   "Returns an AppState with a single pane with 1 empty line."
   []
-  (let [pane (panes/->new-pane [0])]
-    (->AppState (ast/->empty-ast) {(:id pane) pane} nil)))
+  (->AppState (ast/->empty-ast) nil))
 
 (defn replace-state-editor-range [state change-range new-blocks]
   (let [ast (:ast state)
