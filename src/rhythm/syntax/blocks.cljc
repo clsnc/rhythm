@@ -5,9 +5,15 @@
 
 (declare ->text-code-block count-children get-children replace-child)
 
-(defrecord CodeBlock [header children id])
 (defrecord CodeTreePoint [path offset])
 (defrecord CodeTreeRange [start-point end-point])
+
+(defn ->code-block
+  "Returns a new code block with the given header, children, and ID."
+  [header children id]
+  {:header header
+   :children children
+   :id id})
 
 (defn ->empty-code-block
   "Returns a new code block with an empty header and no children."
@@ -17,7 +23,7 @@
 (defn ->text-code-block
   "Returns a new code block with the given header and no children."
   [header]
-  (->CodeBlock header [] (gensym)))
+  (->code-block header [] (gensym)))
 
 (defn block-path->key-path
   "Returns a sequence of keys for following a given block ID path through a code tree."

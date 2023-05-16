@@ -7,7 +7,7 @@
   "Returns an AST with containing only a root node with one empty child."
   []
   (let [empty-block (blocks/->empty-code-block)
-        root-block (blocks/->CodeBlock nil [empty-block] :root)]
+        root-block (blocks/->code-block nil [empty-block] :root)]
     (->AST root-block)))
 
 (defn update-tree
