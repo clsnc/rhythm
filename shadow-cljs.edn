@@ -7,6 +7,10 @@
                       :output-dir "public/js"
                       :asset-path "/js"
                       :modules    {:app {:entries [rhythm.core]}}
-                      :devtools   {:after-load rhythm.core/mount-root}}}
+                      :devtools   {:after-load rhythm.core/mount-root}}
+                :prod {:target     :browser
+                      :output-dir "build/js"
+                      :asset-path "/js"
+                      :modules    {:app {:entries [rhythm.core]}}}}
 
  :dev-http     {3000 {:root "public"}}}

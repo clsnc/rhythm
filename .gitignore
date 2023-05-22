@@ -151,3 +151,4 @@ dist
 ######## Custom
 .shadow-cljs/
 .calva/
+build/
