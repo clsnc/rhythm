@@ -6,7 +6,6 @@
 (declare ->text-code-block count-children get-children replace-child)
 
 (defrecord CodeTreePoint [path offset])
-(defrecord CodeTreeRange [start-point end-point])
 
 (defn ->code-block
   "Returns a new code block with the given header, children, and ID."
@@ -14,6 +13,16 @@
   {:header header
    :children children
    :id id})
+
+(defn ->code-tree-range
+  ([start-point end-point]
+   {:start-point start-point
+    :end-point end-point})
+  
+  ([start-point end-point anchor-point focus-point]
+   (assoc (->code-tree-range start-point end-point)
+          :anchor-point anchor-point
+          :focus-point focus-point)))
 
 (defn ->empty-code-block
   "Returns a new code block with an empty header and no children."
