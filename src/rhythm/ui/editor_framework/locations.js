@@ -127,13 +127,19 @@ export const EditorRange = class EditorRange {
             focusNode,
             focusOffset: domFocusOffset
         } = domRange
-        const anchorElement = anchorNode.parentElement
-        const focusElement = focusNode.parentElement
-        const anchorPoint = EditorPoint.fromDomElementAndOffset(anchorElement, domAnchorOffset)
-        const focusPoint = EditorPoint.fromDomElementAndOffset(focusElement, domFocusOffset)
-        return anchorPoint && focusPoint
-            ? new EditorRange(anchorPoint, focusPoint)
-            : null
+
+        // Handle domRange having null nodes (usually because there is no selection).
+        if(anchorNode && focusNode) {
+            const anchorElement = anchorNode.parentElement
+            const focusElement = focusNode.parentElement
+            const anchorPoint = EditorPoint.fromDomElementAndOffset(anchorElement, domAnchorOffset)
+            const focusPoint = EditorPoint.fromDomElementAndOffset(focusElement, domFocusOffset)
+            return anchorPoint && focusPoint
+                ? new EditorRange(anchorPoint, focusPoint)
+                : null
+        } else {
+            return null
+        }
     }
 }
 
