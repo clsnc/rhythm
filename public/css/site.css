@@ -15,7 +15,7 @@ body {
 
 .editor-pane {
     box-sizing: border-box;
-    width: 400px;
+    min-width: max-content;
     padding: 15px;
     background-color: #202020;
     color: white;
@@ -33,7 +33,7 @@ body {
 .block-header {
     height: 1.5em;
     line-height: 1.5em;
-    width: 100%;
+    min-width: 350px;
     cursor: text;
     white-space: pre-wrap;
     outline: none;
