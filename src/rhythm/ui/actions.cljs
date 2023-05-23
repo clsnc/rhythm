@@ -16,7 +16,7 @@
 
 (defn handle-editor-content-change!
   "Handles on onChange event from an editor."
-  [event swap-editor-state!]
+  [^js event swap-editor-state!]
   (.preventDefault event)
   (let [replace-range (interop/jsEditorRange->code-tree-range (.-replaceRange event))
         suggested-selection (interop/jsEditorRange->code-tree-range (.-afterRange event))

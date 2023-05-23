@@ -15,7 +15,7 @@
 
 (defn jsEditorRange->code-tree-range
   "Returns a CodeTreeRange from an EditorRange."
-  [js-range]
+  [^js js-range]
   (when js-range
     (let [start-point (jsEditorPoint->CodeTreePoint (.-startPoint js-range))
           end-point (jsEditorPoint->CodeTreePoint (.-endPoint js-range))
