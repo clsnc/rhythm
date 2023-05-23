@@ -100,10 +100,18 @@ export const EditorRange = class EditorRange {
                     && EditorPoint.isBeforeInDocument(this.startPoint, this.endPoint)))
     }
 
-    /* Returns true if this references the same range in the editor as other. */
+    /* Returns true if this references the same range (with the same anchor and focus points) 
+       in the editor as other. */
     equals(other) {
         return this.anchorPoint.equals(other.anchorPoint)
             && this.focusPoint.equals(other.focusPoint)
+    }
+
+    /* Returns true if this references the same range in the editor as other without
+       considering the order of the anchor and focus points. */
+    unorderedEquals(other) {
+        return this.startPoint.equals(other.startPoint)
+            && this.endPoint.equals(other.endPoint)
     }
 
     /* Returns a DOM Range object referencing the editable elements covered by this EditorRange. */
