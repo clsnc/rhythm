@@ -9,8 +9,11 @@
                       :modules    {:app {:entries [rhythm.core]}}
                       :devtools   {:after-load rhythm.core/mount-root}}
                 :prod {:target     :browser
-                      :output-dir "build/js"
-                      :asset-path "/js"
-                      :modules    {:app {:entries [rhythm.core]}}}}
+                       :output-dir "build/js"
+                       :asset-path "/js"
+                       :modules    {:app {:entries [rhythm.core]}}
+                       ;; As of this comment, only :simple optimizations work properly.
+                       ;; :advanced and :whitespace produce broken builds in different ways.
+                       :compiler-options {:optimizations :simple}}}
 
  :dev-http     {3000 {:root "public"}}}
