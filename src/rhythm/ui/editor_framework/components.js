@@ -41,11 +41,11 @@ export function EditorRoot({onChange, onSelect, selection, ...passedDivProps}) {
     // Listen for selectionchange events so the onSelect prop can be called.
     useEffect(() => {
         if(onSelect) {
-            const selChangeHandler = (e) => handleSelectionChange(e, onSelect)
+            const selChangeHandler = (e) => handleSelectionChange(e, selRange, onSelect)
             document.addEventListener('selectionchange', selChangeHandler)
             return () => { document.removeEventListener('selectionchange', selChangeHandler) }
         }
-    }, [onSelect])
+    }, [selRange, onSelect])
 
     const divProps = {
         ...passedDivProps,
@@ -68,13 +68,15 @@ export function EditorRoot({onChange, onSelect, selection, ...passedDivProps}) {
 
 /* A React component for an editable component inside an editor */
 export function Editable({editableId, value, ...divProps}) {
+    /* When useLayoutEffect is used instead of useEffect in this function, it is 
+       because these Effects must run before the LayoutEffect of the ancestor Editor 
+       component that updates the window selection. */
+
     const idJsonToDomElementObj = useContext(EditableIdJsonToDomElementObjContext)
     const elementRef = useRef()
 
     /* Storing the editable ID and ID -> element map object in the DOM element allows 
-       an EditorPoint to be derived from a DOM element and an offset. useLayoutEffect is 
-       used here instead of useEffect because this Effect must run before the LayoutEffect 
-       of the ancestor Editor component that updates the window selection. */
+       an EditorPoint to be derived from a DOM element and an offset. */
     useLayoutEffect(() => {
         const element = elementRef.current
         Object.assign(element, {idJsonToDomElementObj, editableId})
@@ -85,7 +87,7 @@ export function Editable({editableId, value, ...divProps}) {
 
     /* Storing the intended editable value in the DOM element allows it to be 
        accessed by event handlers. */
-    useEffect(() => { elementRef.current.editorValue = value }, [elementRef.current, value])
+    useLayoutEffect(() => { elementRef.current.editorValue = value }, [elementRef.current, value])
 
     // Leave a marker on the Editable DOM element so it can be identified.
     useEffect(() => { elementRef.current.isEditable = true })

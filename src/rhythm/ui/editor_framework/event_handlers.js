@@ -1,4 +1,4 @@
-import { EditorRange, addChangeRangeDataToEvent, addSelectionRangeToEvent } from "./locations"
+import { EditorRange, addChangeRangeDataToEvent, editorRangeUnorderedEquals, getEditorSelection } from "./locations"
 
 export function handleBeforeInput(editorRange, event, onChange) {
     const {startPoint, endPoint} = editorRange
@@ -27,7 +27,12 @@ export function handleKeyDown(editorRange, event, onChange) {
     }
 }
 
-export function handleSelectionChange(event, onSelect) {
-    addSelectionRangeToEvent(event)
-    onSelect(event)
+export function handleSelectionChange(event, providedEditorSelection, onSelect) {
+    const currEditorSelection = getEditorSelection(event)
+    /* Only call onSelect if the new selection is different from the provided one. This 
+       prevents an endless loop of selection change events. */
+    if(!editorRangeUnorderedEquals(currEditorSelection, providedEditorSelection)) {
+        event.selectionRange = currEditorSelection
+        onSelect(event)
+    }
 }

@@ -110,8 +110,10 @@ export const EditorRange = class EditorRange {
     /* Returns true if this references the same range in the editor as other without
        considering the order of the anchor and focus points. */
     unorderedEquals(other) {
-        return this.startPoint.equals(other.startPoint)
-            && this.endPoint.equals(other.endPoint)
+        return other
+            ? this.startPoint.equals(other.startPoint)
+                && this.endPoint.equals(other.endPoint)
+            : false
     }
 
     /* Returns a DOM Range object referencing the editable elements covered by this EditorRange. */
@@ -157,12 +159,6 @@ export function addChangeRangeDataToEvent(event, replaceRange, afterRange) {
     Object.assign(event, {replaceRange, afterRange})
 }
 
-/* Adds additional data about the current selection to an event for convenience */
-export function addSelectionRangeToEvent(event) {
-    const selection = window.getSelection()
-    event.selectionRange = EditorRange.fromDomRange(selection)
-}
-
 /* A position comparator for DOM nodes in the document */
 export function domNodePositionComparator(n0, n1) {
     return n0 === n1
@@ -178,4 +174,17 @@ export function domNodePositionComparator(n0, n1) {
    zero width space to improve focus behavior. */
 export function editorOffsetFromDomOffset(domOffset, element) {
     return Math.min(domOffset, element.editorValue.length)
+}
+
+/* Returns the current window selection as an editor selection. */
+export function getEditorSelection() {
+    const selection = window.getSelection()
+    return EditorRange.fromDomRange(selection)
+}
+
+/* Similar to x.unorderedEquals(y), except that a nullish x is handled smoothly. */
+export function editorRangeUnorderedEquals(a, b) {
+    return a == null
+        ? b == null
+        : a.unorderedEquals(b)
 }
