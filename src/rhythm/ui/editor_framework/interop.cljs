@@ -3,31 +3,31 @@
    ["./components" :rename {EditorRoot jsEditorRoot
                             Editable jsEditable}]
    [reagent.core :as r]
-   [rhythm.syntax.blocks :as blocks]])
+   [rhythm.syntax.code :as code]])
 
 (def AdaptedJsEditorRoot (r/adapt-react-class jsEditorRoot))
 (def Editable (r/adapt-react-class jsEditable))
 
-(defn jsEditorPoint->CodeTreePoint
+(defn jsEditorPoint->code-point
   "Returns a tuple of [path offset] from an EditorPoint."
   [js-point]
-  (blocks/->CodeTreePoint (.-id js-point) (.-offset js-point)))
+  (code/->code-point (.-id js-point) (.-offset js-point)))
 
-(defn jsEditorRange->code-tree-range
+(defn jsEditorRange->code-range
   "Returns a CodeTreeRange from an EditorRange."
   [^js js-range]
   (when js-range
-    (let [start-point (jsEditorPoint->CodeTreePoint (.-startPoint js-range))
-          end-point (jsEditorPoint->CodeTreePoint (.-endPoint js-range))
-          anchor-point (jsEditorPoint->CodeTreePoint (.-anchorPoint js-range))
-          focus-point (jsEditorPoint->CodeTreePoint (.-focusPoint js-range))]
-      (blocks/->code-tree-range start-point end-point anchor-point focus-point))))
+    (let [start-point (jsEditorPoint->code-point (.-startPoint js-range))
+          end-point (jsEditorPoint->code-point (.-endPoint js-range))
+          anchor-point (jsEditorPoint->code-point (.-anchorPoint js-range))
+          focus-point (jsEditorPoint->code-point (.-focusPoint js-range))]
+      (code/->code-range start-point end-point anchor-point focus-point))))
 
-(defn- code-tree-range->js-selection-prop [ctr]
+(defn- code-range->js-selection-prop [ctr]
   (let [{{start-path :path
-          start-offset :offset} :start-point
+          start-offset :offset} :start
          {end-path :path
-          end-offset :offset} :end-point} ctr]
+          end-offset :offset} :end} ctr]
     (clj->js {:startId start-path
               :startOffset start-offset
               :endId end-path
@@ -37,5 +37,5 @@
   (let [selection (:selection props)
         jsProps (assoc props
                        :children (r/as-element children)
-                       :selection (code-tree-range->js-selection-prop selection))]
+                       :selection (code-range->js-selection-prop selection))]
    [AdaptedJsEditorRoot jsProps]))

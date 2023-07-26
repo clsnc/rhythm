@@ -2,35 +2,32 @@
   (:require [rhythm.ui.editor-framework.interop :as e]
             [rhythm.ui.motion :as motion]
             [rhythm.ui.ui-utils :as ui-utils]
-            [rhythm.syntax.blocks :as blocks]
             [medley.core :as m]))
 
-(declare editor-block-children)
+(defn- editor-term
+  "Displays a term of a code tree."
+  [term path]
+  [e/Editable
+   {:class :code-term
+    :editableId path
+    :value (str " " term)}])
 
-(defn- editor-block
-  "Displays a code block in an editor. This includes the header and children of the block."
-  [block path]
-  [:div {:class :block}
-   [e/Editable
-    {:class :block-header
-     :editableId path
-     :value (:header block)}]
-   [:div {:class :block-children}
-    (editor-block-children block path)]])
-
-(defn- editor-block-children
-  "Displays the children blocks of a block in an editor."
-  [block path]
-  (for [[child-pos child] (m/indexed (blocks/child-blocks block))]
-    (let [child-path (conj path child-pos)]
-      ^{:key (:id child)} [editor-block child child-path])))
+(defn- editor-node
+  "Displays a node of a code tree."
+  [subtree path]
+  (let [subnodes (for [[child-pos child] (m/indexed subtree)]
+                   (let [child-path (conj path child-pos)]
+                     (if (vector? child)
+                       ^{:key (gensym)} [editor-node child child]
+                       ^{:key (gensym)} [editor-term child child-path])))]
+    [:div.code-view subnodes]))
 
 (defn editor-pane
-  "Displays an editor pane containing the text representation of code-subtree."
+  "Displays an editor pane containing the visual representation of code tree."
   [code-subtree-root code-path]
   [motion/div
    {:class :editor-pane
     :drag true
     :dragMomentum false}
    [:div {:onPointerDownCapture ui-utils/stop-propagation!}
-    [editor-block code-subtree-root code-path]]])
+    [editor-node code-subtree-root code-path]]])

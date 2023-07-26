@@ -25,16 +25,17 @@ body {
     cursor: default;
 }
 
-.block {
+.code-view {
     width: 100%;
+    min-width: 350px;
     background-color: #2f2f2f;
+    cursor: text;
 }
 
-.block-header {
+.code-term, .code-space {
+    display: inline;
     height: 1.5em;
     line-height: 1.5em;
-    min-width: 350px;
-    cursor: text;
     white-space: pre-wrap;
     outline: none;
 }

@@ -6,7 +6,8 @@
      [rhythm.app-state :as app-state]
      [rhythm.ui.actions :as actions]
      [rhythm.ui.editor :as editor]
-     [rhythm.ui.editor-framework.interop :as e]))
+     [rhythm.ui.editor-framework.interop :as e]
+     [rhythm.ui.range-offsets :as ro]))
 
 (def state-atom (r/atom (app-state/->start-state)))
 
@@ -17,8 +18,7 @@
 ;; Views
 
 (defn home-page []
-  (let [{:keys [ast selection]} @state-atom
-        code-tree-root (:root ast)]
+  (let [{:keys [code-root selection]} @state-atom]
     [e/EditorRoot
      ;; Only the contents of the EditorRoot should be shown, not the div itself.
      {:style {:position :absolute
@@ -27,9 +27,9 @@
               :outline :none}
       :onChange #(actions/handle-editor-content-change! % swap-state!)
       :onSelect #(actions/handle-editor-selection-change! % swap-state!)
-      :selection selection}
-     (for [[code-node-pos code-node] (m/indexed (:children code-tree-root))]
-       ^{:key (:id code-node)} [editor/editor-pane code-node [code-node-pos]])]))
+      :selection (ro/add-range-space-offset selection)}
+     (for [[code-node-pos code-node] (m/indexed code-root)]
+       ^{:key (gensym)} [editor/editor-pane code-node [code-node-pos]])]))
 
 ;; -------------------------
 ;; Initialize app
