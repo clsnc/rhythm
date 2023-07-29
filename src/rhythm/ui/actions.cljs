@@ -1,6 +1,6 @@
 (ns rhythm.ui.actions
   (:require [rhythm.app-state :as app-state]
-            [rhythm.syntax.code :as code]
+            [rhythm.code.tree :as tree]
             [rhythm.ui.editor-framework.interop :as interop]
             [rhythm.ui.range-offsets :as ro]))
 
@@ -13,10 +13,10 @@
     (if (= num-new-nodes 1)
       suggested-selection
       (let [replace-end-path (:path (:end replace-range))
-            new-selection-path (code/step-path-end replace-end-path (dec num-new-nodes))
+            new-selection-path (tree/step-path-end replace-end-path (dec num-new-nodes))
             new-selection-offset (count (peek new-nodes))
-            new-selection-point (code/->code-point new-selection-path new-selection-offset)]
-        (code/->code-point-range new-selection-point)))))
+            new-selection-point (tree/->code-point new-selection-path new-selection-offset)]
+        (tree/->code-point-range new-selection-point)))))
 
 (defn handle-editor-content-change!
   "Handles on onChange event from an editor."
@@ -27,7 +27,7 @@
         suggested-space-offset-selection (interop/jsEditorRange->code-range (.-afterRange event))
         suggested-selection (ro/remove-range-space-offset suggested-space-offset-selection)
         new-text (.-data event)
-        new-nodes (code/text->code new-text)
+        new-nodes (tree/text->code new-text)
         ;;new-selection (change-data->new-selection suggested-selection replace-range new-blocks)
         ;; new-selection (ro/remove-range-space-offset suggested-space-offset-selection)
         new-selection (change-data->new-selection suggested-selection replace-range new-nodes)]

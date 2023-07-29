@@ -1,4 +1,4 @@
-(ns rhythm.syntax.code 
+(ns rhythm.code.tree
   (:require [rhythm.utils :as utils]
             [clojure.string :as string]))
 

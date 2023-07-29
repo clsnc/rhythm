@@ -17,12 +17,25 @@ body {
     box-sizing: border-box;
     min-width: max-content;
     padding: 15px;
+    border-radius: 10px;
     background-color: #202020;
     color: white;
     font-family: 'Source Sans 3', sans-serif;
     font-size: 1.1em;
+    line-height: 1.5em;
     box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
     cursor: default;
+}
+
+.code-block {
+    display: flex;
+    border-radius: 5px;
+    background-color: #0a0a0a;
+    overflow: hidden;
+}
+
+.code-view, .code-eval {
+    padding: 5px;
 }
 
 .code-view {
@@ -32,10 +45,13 @@ body {
     cursor: text;
 }
 
+.code-eval {
+    background-color: #404040;
+}
+
 .code-term, .code-space {
     display: inline;
     height: 1.5em;
-    line-height: 1.5em;
     white-space: pre-wrap;
     outline: none;
 }

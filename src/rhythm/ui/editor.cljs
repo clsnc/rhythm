@@ -1,5 +1,6 @@
 (ns rhythm.ui.editor 
-  (:require [rhythm.ui.editor-framework.interop :as e]
+  (:require [rhythm.code.evaluation :as eval]
+            [rhythm.ui.editor-framework.interop :as e]
             [rhythm.ui.motion :as motion]
             [rhythm.ui.ui-utils :as ui-utils]
             [medley.core :as m]))
@@ -18,9 +19,13 @@
   (let [subnodes (for [[child-pos child] (m/indexed subtree)]
                    (let [child-path (conj path child-pos)]
                      (if (vector? child)
-                       ^{:key (gensym)} [editor-node child child]
+                       ^{:key (gensym)} [editor-node child child-path]
                        ^{:key (gensym)} [editor-term child child-path])))]
-    [:div.code-view subnodes]))
+    [:div.code-block
+     [:div.code-view subnodes]
+     [:div.code-eval
+      {:contentEditable false}
+      (str (:clj-val (eval/eval-expr subtree)))]]))
 
 (defn editor-pane
   "Displays an editor pane containing the visual representation of code tree."

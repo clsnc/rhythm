@@ -3,7 +3,7 @@
    ["./components" :rename {EditorRoot jsEditorRoot
                             Editable jsEditable}]
    [reagent.core :as r]
-   [rhythm.syntax.code :as code]])
+   [rhythm.code.tree :as tree]])
 
 (def AdaptedJsEditorRoot (r/adapt-react-class jsEditorRoot))
 (def Editable (r/adapt-react-class jsEditable))
@@ -11,7 +11,7 @@
 (defn jsEditorPoint->code-point
   "Returns a tuple of [path offset] from an EditorPoint."
   [js-point]
-  (code/->code-point (.-id js-point) (.-offset js-point)))
+  (tree/->code-point (.-id js-point) (.-offset js-point)))
 
 (defn jsEditorRange->code-range
   "Returns a CodeTreeRange from an EditorRange."
@@ -21,7 +21,7 @@
           end-point (jsEditorPoint->code-point (.-endPoint js-range))
           anchor-point (jsEditorPoint->code-point (.-anchorPoint js-range))
           focus-point (jsEditorPoint->code-point (.-focusPoint js-range))]
-      (code/->code-range start-point end-point anchor-point focus-point))))
+      (tree/->code-range start-point end-point anchor-point focus-point))))
 
 (defn- code-range->js-selection-prop [ctr]
   (let [{{start-path :path
