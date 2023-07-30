@@ -29,10 +29,12 @@
 
 (defn editor-pane
   "Displays an editor pane containing the visual representation of code tree."
-  [code-subtree-root code-path]
+  [code-root]
   [motion/div
    {:class :editor-pane
     :drag true
     :dragMomentum false}
-   [:div {:onPointerDownCapture ui-utils/stop-propagation!}
-    [editor-node code-subtree-root code-path]]])
+   [:div.code-blocks
+    {:onPointerDownCapture ui-utils/stop-propagation!}
+    (for [[code-node-pos code-node] (m/indexed code-root)]
+      ^{:key (gensym)} [editor-node code-node [code-node-pos]])]])

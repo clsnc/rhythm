@@ -27,6 +27,12 @@ body {
     cursor: default;
 }
 
+.code-blocks {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
 .code-block {
     display: flex;
     border-radius: 5px;

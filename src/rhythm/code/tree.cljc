@@ -23,9 +23,20 @@
   [point]
   (->code-range point point))
 
-(defn text->code [text]
-  (let [terms (string/split text " " -1)]
+(defn- line->code
+  "Converts a line of text to a code block."
+  [line]
+  (let [terms (string/split line " " -1)]
     (vec terms)))
+
+(defn text->code
+  "Converts a string to a code tree."
+  [text]
+  (let [lines (string/split text "\n" -1)]
+    (vec (map line->code lines))))
+
+(defn term? [node]
+  (string? node))
 
 (defn step-path-end
   "Adds step to the last entry in a path."
@@ -35,51 +46,100 @@
         new-path (conj (vec path-start) new-path-last)]
     new-path))
 
-(defn- merge-inner-tree
-  "Slices the start-root tree at start-path, the end-root tree at end-path, then merges 
-   the resulting trees into a single tree."
-  [start-root end-root start-path end-path]
-  (let [[start-slice-pos & start-path-rest] start-path
-        [end-slice-pos & end-path-rest] end-path
-        start-slice (subvec start-root 0 start-slice-pos)
-        end-slice (subvec end-root end-slice-pos)
-        merged-root (vec (concat start-slice end-slice))]
-    (if (or (empty? start-path-rest) (empty? end-path-rest))
-      merged-root
-      (let [slice-start-child (get start-root start-slice-pos)
-            end-slice-child (or (first end-slice) [])
-            combined-subtree (merge-inner-tree slice-start-child end-slice-child
-                                               start-path-rest end-path-rest)]
-        (assoc merged-root start-slice-pos combined-subtree)))))
+(defn- vec-start-slice
+  "Returns the portion of a vector before pos."
+  [v pos]
+  (subvec v 0 pos))
 
-(defn- merge-outer-nodes
-  "Merges start-leaf into the first node of new-nodes and end-leaf into the last."
-  [start-leaf end-leaf start-offset end-offset inner-nodes]
-  (let [inner-start-leaf (get inner-nodes 0)
-        combined-start-leaf (str (subs start-leaf 0 start-offset)
-                                 inner-start-leaf)
-        new-nodes-with-combined-start (assoc inner-nodes 0 combined-start-leaf)
-        inner-end-leaf-pos (dec (count new-nodes-with-combined-start))
-        inner-end-leaf (get new-nodes-with-combined-start inner-end-leaf-pos)
-        combined-end-leaf (str inner-end-leaf
-                               (subs end-leaf end-offset))
-        combined-nodes (assoc new-nodes-with-combined-start inner-end-leaf-pos combined-end-leaf)]
-    combined-nodes))
+(defn- vec-end-slice
+  "Returns the portion of a vector starting with pos."
+  [v pos]
+  (subvec v pos))
+
+(defn- str-start-slice
+  "Returns the substring of a string before pos."
+  [s pos]
+  (subs s 0 pos))
+
+(defn- str-end-slice
+  "Returns the substring of a string starting with pos."
+  [s pos]
+  (subs s pos))
+
+(defn- start-join-slice-child
+  "Joins a sliced child to a sliced node when the start portion is being kept."
+  [node child]
+  (conj node child))
+
+(defn- end-join-slice-child
+  "Joins a sliced child to a sliced node when the end portion is being kept."
+  [node child]
+  (assoc node 0 child))
+
+(defn- slice-tree
+  "Slices a tree along a given path and offset. Whether the start or end slice is 
+   returned is determined by the functions passed as vec-slice, str-slice, and 
+   join-slice-child."
+  [vec-slice str-slice join-slice-child root path offset]
+  (let [[slice-pos & path-rest] path
+        slice-child (root slice-pos)
+        new-slice-child (if (empty? path-rest)
+                          (str-slice slice-child offset)
+                          (slice-tree vec-slice str-slice join-slice-child
+                                      slice-child path-rest offset))
+        node-kept-slice (join-slice-child (vec-slice root slice-pos)
+                                          new-slice-child)]
+    node-kept-slice))
+
+(defn- start-slice-tree
+  "Slices a tree along a given path and offset and returns the start slice."
+  [root path offset]
+  (slice-tree vec-start-slice str-start-slice start-join-slice-child
+              root path offset))
+
+(defn- end-slice-tree
+  "Slices a tree along a given path and offset and returns the end slice."
+  [root path offset]
+  (slice-tree vec-end-slice str-end-slice end-join-slice-child
+              root path offset))
+
+(defn- join-2-trees
+  "Joins 2 trees together, concatenating the end nodes and subnodes of root1 with the 
+   start nodes and subnodes of root2. Assumes root1's end path and root2's start path are 
+   of equal depth."
+  [root1 root2]
+  (if (term? root1)
+    (str root1 root2)
+    (let [join-child-1 (peek root1)
+          join-child-2 (first root2)
+          joined-child (join-2-trees join-child-1 join-child-2)
+          joined-root (utils/vec-concat (drop-last root1)
+                                        [joined-child]
+                                        (rest root2))]
+      joined-root)))
+
+(defn- join-trees
+  "Joins 2 or more trees together, concatenating the end nodes of each tree with the 
+   start nodes the next one. Assumes each tree's end path has the same depth as the start 
+   path of the following tree."
+  [root1 & roots]
+  (loop [root1 root1
+         roots roots]
+    (let [[root2 & roots-rest] roots]
+      (if (nil? root2)
+        root1
+        (let [root1+2 (join-2-trees root1 root2)]
+          (recur root1+2 roots-rest))))))
 
 (defn replace-range
-  "Removes the portion of the tree between start-path and end-path and merges 
-   the remainder of each node on start-path with the remainder of the node of 
-   the same level originally on end-path."
-  [root range new-nodes]
-  (let [new-nodes (vec new-nodes)
-        {{start-path :path
+  "Replace a range in a tree with another tree. Assumes that the edges of new-slice 
+   match the depth of the inner edges of root it will be joined with."
+  [root range new-slice]
+  (let [{{start-path :path
           start-offset :offset} :start
          {end-path :path
           end-offset :offset} :end} range
-        start-leaf (get-in root start-path)
-        end-leaf (get-in root end-path)
-        new-combined-nodes (merge-outer-nodes start-leaf end-leaf start-offset end-offset new-nodes)]
-    (-> root
-        (merge-inner-tree root start-path end-path)
-        (utils/vec-remove-nth-in start-path)
-        (utils/vec-insert-multiple-in start-path new-combined-nodes))))
+        start-slice (start-slice-tree root start-path start-offset)
+        end-slice (end-slice-tree root end-path end-offset)
+        new-root (join-trees start-slice new-slice end-slice)]
+    new-root))

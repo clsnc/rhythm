@@ -1,6 +1,5 @@
 (ns rhythm.core
     (:require
-     [medley.core :as m]
      [reagent.core :as r]
      [reagent.dom.client :as d]
      [rhythm.app-state :as app-state]
@@ -28,8 +27,7 @@
       :onChange #(actions/handle-editor-content-change! % swap-state!)
       :onSelect #(actions/handle-editor-selection-change! % swap-state!)
       :selection (ro/add-range-space-offset selection)}
-     (for [[code-node-pos code-node] (m/indexed code-root)]
-       ^{:key (gensym)} [editor/editor-pane code-node [code-node-pos]])]))
+     ^{:key (gensym)} [editor/editor-pane code-root]]))
 
 ;; -------------------------
 ;; Initialize app
