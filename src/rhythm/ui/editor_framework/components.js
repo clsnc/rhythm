@@ -22,9 +22,11 @@ export function EditorRoot({onChange, onSelect, selection, ...passedDivProps}) {
         endId: selEndId,
         endOffset: selEndOffset
     } = selection
-    const selStartPoint = EditorPoint.fromIdAndOffset(idJsonToDomElementObj, selStartId, selStartOffset)
-    const selEndPoint = EditorPoint.fromIdAndOffset(idJsonToDomElementObj, selEndId, selEndOffset)
-    const selRange = new EditorRange(selStartPoint, selEndPoint)
+    /* These points cannot be normalized yet because normalization requires looking at the DOM which
+       has not been updated yet. */
+    const selStartNotNorm = EditorPoint.fromIdAndOffset(idJsonToDomElementObj, selStartId, selStartOffset)
+    const selEndNotNorm = EditorPoint.fromIdAndOffset(idJsonToDomElementObj, selEndId, selEndOffset)
+    const selRangeNotNorm = new EditorRange(selStartNotNorm, selEndNotNorm)
     const elementRef = useRef()
 
     // Leave a marker on the editor root DOM element so it can be identified.
@@ -33,19 +35,20 @@ export function EditorRoot({onChange, onSelect, selection, ...passedDivProps}) {
     /* Set the selection in the editor to whatever is described in the selection prop.
        useLayoutEffect is used here instead of useEffect to prevent caret flickering. */
     useLayoutEffect(() => {
+        const selRange = selRangeNotNorm.normalize()
         if(selRange.currentlyExists()) {
             setDomSelection(selRange)
         }
-    }, [idJsonToDomElementObj, selStartId, selStartOffset, selEndId, selEndOffset])
+    }, [idJsonToDomElementObj, selRangeNotNorm])
 
     // Listen for selectionchange events so the onSelect prop can be called.
     useEffect(() => {
         if(onSelect) {
-            const selChangeHandler = (e) => handleSelectionChange(e, selRange, onSelect)
+            const selChangeHandler = (e) => handleSelectionChange(e, selRangeNotNorm, onSelect)
             document.addEventListener('selectionchange', selChangeHandler)
             return () => { document.removeEventListener('selectionchange', selChangeHandler) }
         }
-    }, [selRange, onSelect])
+    }, [selRangeNotNorm, onSelect])
 
     const divProps = {
         ...passedDivProps,
@@ -55,8 +58,8 @@ export function EditorRoot({onChange, onSelect, selection, ...passedDivProps}) {
     }
 
     if(onChange) {
-        divProps.onBeforeInput = (e) => handleBeforeInput(selRange, e, onChange)
-        divProps.onKeyDown = (e) => handleKeyDown(selRange, e, onChange)
+        divProps.onBeforeInput = (e) => handleBeforeInput(selRangeNotNorm, e, onChange)
+        divProps.onKeyDown = (e) => handleKeyDown(selRangeNotNorm, e, onChange)
     }
 
     return createElement(

@@ -11,6 +11,11 @@ function isEditor(element) {
     return Boolean(element.isEditor)
 }
 
+/* Returns whether a DOM element is styled to be inline. */
+function isInline(element) {
+    return window.getComputedStyle(element).display === "inline"
+}
+
 /* Represents a point in an editor. A point is any location that the caret could have. */
 export const EditorPoint = class EditorPoint {
     constructor(idJsonToDomElementObj, id, offset) {
@@ -27,6 +32,23 @@ export const EditorPoint = class EditorPoint {
     /* Returns true if the EditorPoint currently exists in the editor. */
     currentlyExists() {
         return Boolean(this.currentElement())
+    }
+
+    /* Returns a normalized point. If two inline Editables are adjacent, then the last position
+       of the first is no different than the first position of the second. In this case, the 
+       last position of the second is returned. */
+    normalize() {
+        const currElement = this.currentElement()
+        if(this.offset === 0 && isInline(currElement)) {
+            const prevElement = currElement.previousSibling
+            if(prevElement && isEditable(prevElement) && isInline(prevElement)) {
+                /* If the offset is 0 and both this element and its previous sibling 
+                   are inline, return a point at the end of the previous sibling. */
+                return EditorPoint.fromDomElementAndOffset(
+                    prevElement, prevElement.editorValue.length)
+            }
+        }
+        return this
     }
 
     /* Returns true if this references the same point in the editor as other. */
@@ -105,6 +127,11 @@ export const EditorRange = class EditorRange {
     equals(other) {
         return this.anchorPoint.equals(other.anchorPoint)
             && this.focusPoint.equals(other.focusPoint)
+    }
+
+    /* Returns a normalized EditorRange. */
+    normalize() {
+        return new EditorRange(this.anchorPoint.normalize(), this.focusPoint.normalize())
     }
 
     /* Returns true if this references the same range in the editor as other without
