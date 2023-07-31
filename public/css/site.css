@@ -55,7 +55,7 @@ body {
     background-color: #404040;
 }
 
-.code-term, .code-space {
+.code-term, .code-prespace {
     display: inline;
     height: 1.5em;
     white-space: pre-wrap;

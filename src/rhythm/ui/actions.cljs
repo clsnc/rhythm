@@ -2,7 +2,7 @@
   (:require [rhythm.app-state :as app-state]
             [rhythm.code.tree :as tree]
             [rhythm.ui.editor-framework.interop :as interop]
-            [rhythm.ui.range-offsets :as ro]))
+            [rhythm.ui.prespace :as ps]))
 
 (defn- change-data->new-selection
   "Calculates the new selection after the user changes editor content."
@@ -15,8 +15,8 @@
     ;; a single node. If this is not true, then then calculate the correct new selection.
     (if (and (= num-new-lines 1) (= num-new-terms 1))
       suggested-selection
-      (let [replace-end-path (:path (:end replace-range))
-            new-selection-path (tree/step-path-end replace-end-path (dec num-new-terms))
+      (let [replace-start-path (:path (:start replace-range))
+            new-selection-path (tree/step-path-end replace-start-path (dec num-new-terms))
             last-term (peek (peek inserted-tree))
             new-selection-offset (count last-term)
             new-selection-point (tree/->code-point new-selection-path new-selection-offset)]
@@ -26,10 +26,10 @@
   "Handles on onChange event from an editor."
   [^js event swap-editor-state!]
   (.preventDefault event)
-  (let [space-offset-replace-range (interop/jsEditorRange->code-range (.-replaceRange event))
-        replace-range (ro/remove-range-space-offset space-offset-replace-range)
-        suggested-space-offset-selection (interop/jsEditorRange->code-range (.-afterRange event))
-        suggested-selection (ro/remove-range-space-offset suggested-space-offset-selection)
+  (let [prespace-replace-range (interop/jsEditorRange->code-range (.-replaceRange event))
+        replace-range (ps/maybe-prespace-range->range prespace-replace-range)
+        prespace-suggested-selection (interop/jsEditorRange->code-range (.-afterRange event))
+        suggested-selection (ps/maybe-prespace-range->range prespace-suggested-selection)
         new-text (.-data event)
         inserted-tree (tree/text->code new-text)
         new-selection (change-data->new-selection suggested-selection replace-range inserted-tree)]
@@ -40,6 +40,6 @@
 (defn handle-editor-selection-change!
   "Handles an onSelect event from an editor."
   [event swap-editor-state!]
-  (let [new-space-offset-selection (interop/jsEditorRange->code-range (.-selectionRange event))
-        new-selection (ro/remove-range-space-offset new-space-offset-selection)]
+  (let [prespace-new-selection (interop/jsEditorRange->code-range (.-selectionRange event))
+        new-selection (ps/maybe-prespace-range->range prespace-new-selection)]
     (swap-editor-state! app-state/replace-selection new-selection)))

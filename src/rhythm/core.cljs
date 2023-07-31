@@ -5,8 +5,7 @@
      [rhythm.app-state :as app-state]
      [rhythm.ui.actions :as actions]
      [rhythm.ui.editor :as editor]
-     [rhythm.ui.editor-framework.interop :as e]
-     [rhythm.ui.range-offsets :as ro]))
+     [rhythm.ui.editor-framework.interop :as e]))
 
 (def state-atom (r/atom (app-state/->start-state)))
 
@@ -26,7 +25,7 @@
               :outline :none}
       :onChange #(actions/handle-editor-content-change! % swap-state!)
       :onSelect #(actions/handle-editor-selection-change! % swap-state!)
-      :selection (ro/add-range-space-offset selection)}
+      :selection selection}
      ^{:key (gensym)} [editor/editor-pane code-root]]))
 
 ;; -------------------------

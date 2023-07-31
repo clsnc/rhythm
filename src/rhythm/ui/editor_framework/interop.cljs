@@ -8,10 +8,22 @@
 (def AdaptedJsEditorRoot (r/adapt-react-class jsEditorRoot))
 (def Editable (r/adapt-react-class jsEditable))
 
+(defn- fix-prespace-path
+  "Reagent automatically converts props to JS objects. Keywords get converted to strings.
+   This means that when a path is used as an Editable ID and then passed back to Clojurescript, 
+   the converted Clojurescript object now contains a string in place of the original keyword. 
+   This function corrects this in the specific case of prespace paths."
+  [p]
+  (let [last-pos (dec (count p))
+        last-el (p last-pos)]
+    (if (= last-el "prespace")
+      (assoc p last-pos :prespace)
+      p)))
+
 (defn jsEditorPoint->code-point
   "Returns a tuple of [path offset] from an EditorPoint."
   [js-point]
-  (tree/->code-point (.-id js-point) (.-offset js-point)))
+  (tree/->code-point (fix-prespace-path (js->clj (.-id js-point))) (.-offset js-point)))
 
 (defn jsEditorRange->code-range
   "Returns a CodeTreeRange from an EditorRange."

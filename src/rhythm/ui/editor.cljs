@@ -3,7 +3,8 @@
             [rhythm.ui.editor-framework.interop :as e]
             [rhythm.ui.motion :as motion]
             [rhythm.ui.ui-utils :as ui-utils]
-            [medley.core :as m]))
+            [medley.core :as m]
+            [rhythm.ui.prespace :as ps]))
 
 (defn- editor-term
   "Displays a term of a code tree."
@@ -11,18 +12,31 @@
   [e/Editable
    {:class :code-term
     :editableId path
-    :value (str " " term)}])
+    :value term
+    }])
+
+(defn- node-prespace
+  "Displays a space between editor nodes."
+  [node-path]
+  [e/Editable
+   {:class :code-prespace
+    :editableId (ps/path->prespace-path node-path)
+    :value " "}])
 
 (defn- editor-node
   "Displays a node of a code tree."
   [subtree path]
-  (let [subnodes (for [[child-pos child] (m/indexed subtree)]
-                   (let [child-path (conj path child-pos)]
-                     (if (vector? child)
-                       ^{:key (gensym)} [editor-node child child-path]
-                       ^{:key (gensym)} [editor-term child child-path])))]
+  (let [space+subnode-vecs (for [[child-pos child] (m/indexed subtree)]
+                             (let [child-path (conj path child-pos)
+                                   rendered-node (if (vector? child)
+                                                   ^{:key (gensym)} [editor-node child child-path]
+                                                   ^{:key (gensym)} [editor-term child child-path])]
+                               (if (pos? child-pos)
+                                 [^{:key (gensym)} [node-prespace child-path] rendered-node]
+                                 [rendered-node])))
+        spaces+subnodes (apply concat space+subnode-vecs)]
     [:div.code-block
-     [:div.code-view subnodes]
+     [:div.code-view spaces+subnodes]
      [:div.code-eval
       {:contentEditable false}
       (str (:clj-val (eval/eval-expr subtree)))]]))
