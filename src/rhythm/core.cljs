@@ -16,7 +16,8 @@
 ;; Views
 
 (defn home-page []
-  (let [{:keys [code-root selection]} @state-atom]
+  (let [{:keys [code-tree selection]} @state-atom
+        code-root (:root code-tree)]
     [e/EditorRoot
      ;; Only the contents of the EditorRoot should be shown, not the div itself.
      {:style {:position :absolute

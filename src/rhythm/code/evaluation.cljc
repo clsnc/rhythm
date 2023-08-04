@@ -1,5 +1,6 @@
 (ns rhythm.code.evaluation 
-  (:require [rhythm.utils :as utils]))
+  (:require [rhythm.utils :as utils]
+            [rhythm.code.node :as node]))
 
 (defn- _sum [args]
   {:clj-val (apply + (map :clj-val args))})
@@ -11,19 +12,21 @@
 (defn term->obj
   "Returns a code object derived from a term."
   [term]
-  (let [num (parse-long term)]
+  (let [term-text (:text term)
+        num (parse-long term-text)]
     (if num
       {:type :int
        :clj-val num}
-      (default-context term))))
+      (default-context term-text))))
 
-(defn eval-expr
-  "Reduces a code expression to a code object."
-  [expr]
-  (if (vector? expr)
-    (let [subresults (map eval-expr expr)
+(defn eval-node
+  "Evaluates a code node to a code object."
+  [node]
+  (if (node/code-term? node)
+    (term->obj node)
+    (let [subnodes (node/node-children node)
+          subresults (map eval-node subnodes)
           [args op] (utils/split-off-last subresults)
           f (:clj-val op)
           result (when (ifn? f) (f args))]
-      result)
-    (term->obj expr)))
+      result)))

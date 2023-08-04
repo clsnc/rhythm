@@ -1,30 +1,30 @@
 (ns rhythm.ui.prespace)
 
-(defn prespace-path?
-  "Returns whether p is a prespace path."
+(defn prespace-id?
+  "Returns whether p is a prespace ID."
   [p]
-  (= (peek p) :prespace))
+  (and (vector? p) (= (peek p) :prespace)))
 
-(defn prespace-path->path
-  "Converts a prespace path to a regular path."
+(defn prespace-eid->eid
+  "Converts a prespace ID to a regular ID."
   [pp]
-  (vec (drop-last pp)))
+  (first pp))
 
-(defn path->prespace-path
-  "Converts a regular path to a prespace path."
+(defn eid->prespace-eid
+  "Converts a regular ID to a prespace ID."
   [p]
-  (conj p :prespace))
+  [p :prespace])
 
 (defn prespace-point?
   "Returns whether p is a prespace point."
   [p] 
-  (prespace-path? (:path p)))
+  (prespace-id? (:id p)))
 
 (defn prespace-point->point
   "Converts a prespace point to a regular point."
   [pp]
   (-> pp
-      (update :path prespace-path->path)
+      (update :id prespace-eid->eid)
       (update :offset dec)))
 
 (defn maybe-prespace-point->point

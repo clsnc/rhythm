@@ -57,3 +57,6 @@
   "Returns a vector in a nested associative structure without the value at ks."
   [m ks]
   (update-parent-in m ks vec-remove-nth))
+
+(defn vec-split-at [n coll]
+  (map vec (split-at n coll)))

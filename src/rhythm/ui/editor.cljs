@@ -4,51 +4,56 @@
             [rhythm.ui.motion :as motion]
             [rhythm.ui.ui-utils :as ui-utils]
             [medley.core :as m]
-            [rhythm.ui.prespace :as ps]))
+            [rhythm.ui.prespace :as ps]
+            [rhythm.code.node :as node]))
 
 (defn- editor-term
   "Displays a term of a code tree."
-  [term path]
+  [term]
   [e/Editable
    {:class :code-term
-    :editableId path
-    :value term
-    }])
+    :editableId (:id term)
+    :value (:text term)}])
 
 (defn- node-prespace
   "Displays a space between editor nodes."
-  [node-path]
+  [node-id]
   [e/Editable
    {:class :code-prespace
-    :editableId (ps/path->prespace-path node-path)
+    :editableId (ps/eid->prespace-eid node-id)
     :value " "}])
 
 (defn- editor-node
   "Displays a node of a code tree."
-  [subtree path]
-  (let [space+subnode-vecs (for [[child-pos child] (m/indexed subtree)]
-                             (let [child-path (conj path child-pos)
-                                   rendered-node (if (vector? child)
-                                                   ^{:key (gensym)} [editor-node child child-path]
-                                                   ^{:key (gensym)} [editor-term child child-path])]
+  [node]
+  (let [id->child (:id->child node)
+        space+subnode-vecs (for [[child-pos child-id] (m/indexed (:pos->id node))]
+                             (let [child (id->child child-id)
+                                   child-component-class (if (node/code-term? child)
+                                                           editor-term
+                                                           editor-node)
+                                   rendered-node ^{:key child-id} [child-component-class child]]
                                (if (pos? child-pos)
-                                 [^{:key (gensym)} [node-prespace child-path] rendered-node]
+                                 [^{:key (str child-id :prespace)} [node-prespace child-id]
+                                  rendered-node]
                                  [rendered-node])))
         spaces+subnodes (apply concat space+subnode-vecs)]
     [:div.code-block
      [:div.code-view spaces+subnodes]
      [:div.code-eval
       {:contentEditable false}
-      (str (:clj-val (eval/eval-expr subtree)))]]))
+      (str (:clj-val (eval/eval-node node)))]]))
 
 (defn editor-pane
   "Displays an editor pane containing the visual representation of code tree."
-  [code-root]
+  [node]
   [motion/div
    {:class :editor-pane
     :drag true
     :dragMomentum false}
    [:div.code-blocks
     {:onPointerDownCapture ui-utils/stop-propagation!}
-    (for [[code-node-pos code-node] (m/indexed code-root)]
-      ^{:key (gensym)} [editor-node code-node [code-node-pos]])]])
+    (let [id->child (:id->child node)]
+      (for [child-id (:pos->id node)]
+        (let [child (id->child child-id)]
+          ^{:key child-id} [editor-node child])))]])

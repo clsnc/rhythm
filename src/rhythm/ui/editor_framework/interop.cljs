@@ -2,47 +2,46 @@
   [:require
    ["./components" :rename {EditorRoot jsEditorRoot
                             Editable jsEditable}]
+   [clojure.edn :as edn]
    [reagent.core :as r]
-   [rhythm.code.tree :as tree]])
+   [rhythm.code.location :as loc]])
 
 (def AdaptedJsEditorRoot (r/adapt-react-class jsEditorRoot))
-(def Editable (r/adapt-react-class jsEditable))
+(def AdaptedEditable (r/adapt-react-class jsEditable))
 
-(defn- fix-prespace-path
-  "Reagent automatically converts props to JS objects. Keywords get converted to strings.
-   This means that when a path is used as an Editable ID and then passed back to Clojurescript, 
-   the converted Clojurescript object now contains a string in place of the original keyword. 
-   This function corrects this in the specific case of prespace paths."
-  [p]
-  (let [last-pos (dec (count p))
-        last-el (p last-pos)]
-    (if (= last-el "prespace")
-      (assoc p last-pos :prespace)
-      p)))
+(defn Editable [props & children]
+  ;; :editableId is serialized to EDN to allow symbols to survive conversion to and from JS 
+  ;; structures. This conversion normally converts symbols to strings, which stay strings on 
+  ;; conversion back. If there is a way to pass the editableId prop without it being converted 
+  ;; by Reagent, using that would be an improvement on serializing and deserializing.
+  (apply vector AdaptedEditable (update props :editableId pr-str) children))
 
 (defn jsEditorPoint->code-point
-  "Returns a tuple of [path offset] from an EditorPoint."
+  "Converts an EditorPoint to a code point."
   [js-point]
-  (tree/->code-point (fix-prespace-path (js->clj (.-id js-point))) (.-offset js-point)))
+  ;; The ID is converted from EDN here because it is serialized in the Editable component.
+  (loc/->code-point (edn/read-string (js->clj (.-id js-point))) (.-offset js-point)))
 
 (defn jsEditorRange->code-range
-  "Returns a CodeTreeRange from an EditorRange."
+  "Converts an EditorRange to a code range."
   [^js js-range]
   (when js-range
     (let [start-point (jsEditorPoint->code-point (.-startPoint js-range))
           end-point (jsEditorPoint->code-point (.-endPoint js-range))
           anchor-point (jsEditorPoint->code-point (.-anchorPoint js-range))
           focus-point (jsEditorPoint->code-point (.-focusPoint js-range))]
-      (tree/->code-range start-point end-point anchor-point focus-point))))
+      (loc/->code-range start-point end-point anchor-point focus-point))))
 
-(defn- code-range->js-selection-prop [ctr]
-  (let [{{start-path :path
+(defn- code-range->js-selection-prop
+  "Converts a code range to a selection prop object."
+  [ctr]
+  (let [{{start-id :id
           start-offset :offset} :start
-         {end-path :path
+         {end-id :id
           end-offset :offset} :end} ctr]
-    (clj->js {:startId start-path
+    (clj->js {:startId start-id
               :startOffset start-offset
-              :endId end-path
+              :endId end-id
               :endOffset end-offset})))
 
 (defn EditorRoot [props children]

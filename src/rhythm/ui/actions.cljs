@@ -1,26 +1,23 @@
 (ns rhythm.ui.actions
   (:require [rhythm.app-state :as app-state]
-            [rhythm.code.tree :as tree]
+            [rhythm.code.location :as loc]
             [rhythm.ui.editor-framework.interop :as interop]
-            [rhythm.ui.prespace :as ps]))
+            [rhythm.ui.prespace :as ps]
+            [rhythm.code.node :as node]))
 
-(defn- change-data->new-selection
+(defn- content-change-data->new-selection
   "Calculates the new selection after the user changes editor content."
-  [suggested-selection replace-range inserted-tree]
-  ;; TODO: Rewrite this to generalize to variable depth trees, possibly after pathing 
-  ;; better than simple index sequences is available.
-  (let [num-new-lines (count inserted-tree)
-        num-new-terms (count (peek inserted-tree))]
-    ;; The suggested selection is based on the assumption that text is being edited within 
-    ;; a single node. If this is not true, then then calculate the correct new selection.
-    (if (and (= num-new-lines 1) (= num-new-terms 1))
-      suggested-selection
-      (let [replace-start-path (:path (:start replace-range))
-            new-selection-path (tree/step-path-end replace-start-path (dec num-new-terms))
-            last-term (peek (peek inserted-tree))
-            new-selection-offset (count last-term)
-            new-selection-point (tree/->code-point new-selection-path new-selection-offset)]
-        (tree/->code-point-range new-selection-point)))))
+  [replace-range inserted-node]
+  (let [multiple-new-terms (or (< 1 (node/num-children inserted-node))
+                               (< 1 (node/num-children (node/first-child inserted-node))))
+        sel-end-id (:id (:end replace-range))
+        last-new-term (node/node->last-term inserted-node)
+        last-new-term-len (count (:text last-new-term))
+        sel-end-offset (if multiple-new-terms
+                         last-new-term-len
+                         (let [replace-start-offset (:offset (:start replace-range))]
+                           (+ replace-start-offset last-new-term-len)))]
+    (loc/->code-point-range (loc/->code-point sel-end-id sel-end-offset))))
 
 (defn handle-editor-content-change!
   "Handles on onChange event from an editor."
@@ -28,13 +25,11 @@
   (.preventDefault event)
   (let [prespace-replace-range (interop/jsEditorRange->code-range (.-replaceRange event))
         replace-range (ps/maybe-prespace-range->range prespace-replace-range)
-        prespace-suggested-selection (interop/jsEditorRange->code-range (.-afterRange event))
-        suggested-selection (ps/maybe-prespace-range->range prespace-suggested-selection)
         new-text (.-data event)
-        inserted-tree (tree/text->code new-text)
-        new-selection (change-data->new-selection suggested-selection replace-range inserted-tree)]
+        inserted-node (node/text->code-node new-text)
+        new-selection (content-change-data->new-selection replace-range inserted-node)]
     (swap-editor-state! #(-> %
-                             (app-state/replace-state-editor-range replace-range inserted-tree)
+                             (app-state/replace-state-editor-range replace-range inserted-node)
                              (app-state/replace-selection new-selection)))))
 
 (defn handle-editor-selection-change!
