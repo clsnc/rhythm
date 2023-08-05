@@ -6,7 +6,7 @@
 (defn ->start-state
   "Returns an AppState with a single pane with 1 empty line."
   []
-  (->AppState tree/empty-code-tree nil))
+  (->AppState tree/default-code-tree nil))
 
 (defn replace-state-editor-range [state change-range insert-root]
   (let [code-tree (:code-tree state)

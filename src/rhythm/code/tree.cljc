@@ -2,7 +2,8 @@
   (:require [rhythm.utils :as utils]
             [rhythm.code.node :as node]))
 
-(def empty-arr-tree [["THIS" "IS" "A" "TEST"]])
+(def default-arr-tree [["1" "2" "3" "sum"]
+                       ["1" "3" "5" "7" "11" "sum"]])
 
 (defn- tree-id-path
   "Returns the path of IDs from the root of tree to the node with ID id."
@@ -82,7 +83,7 @@
     {:root root
      :id->parent-id id->parent-id}))
 
-(def empty-code-tree (vec-tree->code-tree empty-arr-tree))
+(def default-code-tree (vec-tree->code-tree default-arr-tree))
 
 (defn- concat-2-terms
   "Concatenates 2 terms a and b into a single term retaining the ID of b."
