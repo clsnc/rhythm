@@ -2,7 +2,7 @@
   (:require [clojure.string :as string]
             [medley.core :as m]))
 
-(declare nodes->new-parent-node nth-child remove-nth-child)
+(declare code-term? nodes->new-parent-node nth-child remove-nth-child)
 
 (defn ->code-node [pos->id id->child id]
   {:pos->id pos->id
@@ -44,7 +44,7 @@
 (defn code-node->vec-node
   "Converts a code node to a vector node."
   [code-node]
-  (if (node/code-term? code-node)
+  (if (code-term? code-node)
     (:text code-node)
     (let [id->child-node (:id->child code-node)
           vec-nodes (mapv #(code-node->vec-node (id->child-node %)) (:pos->id code-node))]
