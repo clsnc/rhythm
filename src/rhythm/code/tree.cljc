@@ -5,7 +5,7 @@
 (def MIN-TREE-DEPTH 2)
 
 (def default-arr-tree [["1" "2" "3" "sum"]
-                       ["1" "3" "5" "7" "11" "sum"]])
+                       ["1" ["3" "5" "sum"] "7" "11" "sum"]])
 
 (defn- tree-id-path
   "Returns the path of IDs from the root of tree to the node with ID id."
