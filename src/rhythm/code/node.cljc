@@ -146,3 +146,17 @@
   (let [lines (string/split text "\n" -1)
         subnodes (map line->code-node lines)]
     (nodes->new-parent-node subnodes)))
+
+(defn wrap-node
+  "Wraps node in num-layers new ancestor nodes. If num-layers is not provided, node will 
+   be wrapped once."
+  ([node]
+   (nodes->new-parent-node [node]))
+  
+  ([node num-layers]
+   (loop [curr-node node
+          layers-left num-layers]
+     (if (<= layers-left 0)
+       curr-node
+       (recur (wrap-node curr-node)
+              (dec layers-left))))))

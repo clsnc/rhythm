@@ -10,7 +10,7 @@
 
 (defn replace-state-editor-range [state change-range insert-root]
   (let [code-tree (:code-tree state)
-        new-code-tree (tree/replace-tree-id-range code-tree change-range insert-root)]
+        new-code-tree (tree/replace-tree-id-range-with-node code-tree change-range insert-root)]
     (assoc state :code-tree new-code-tree)))
 
 (defn replace-selection

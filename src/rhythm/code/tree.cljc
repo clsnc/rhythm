@@ -2,6 +2,8 @@
   (:require [rhythm.utils :as utils]
             [rhythm.code.node :as node]))
 
+(def MIN-TREE-DEPTH 2)
+
 (def default-arr-tree [["1" "2" "3" "sum"]
                        ["1" "3" "5" "7" "11" "sum"]])
 
@@ -212,7 +214,7 @@
         new-root (merge-join-nodes start-slice new-slice end-slice)]
     new-root))
 
-(defn replace-tree-id-range
+(defn replace-tree-id-range-with-root
   "Replace a range in node, described with ID paths, with the contents of new-slice. 
    Assumes that the edges of new-slice match the depth of the inner edges of node it will 
    be joined with."
@@ -231,3 +233,14 @@
     (assoc tree
            :root new-root
            :id->parent-id new-id->parent-id)))
+
+(defn replace-tree-id-range-with-node
+  "Replace a range in tree with the contents of new-slice-node. Assumes that new-slice-node is 
+   the depth of the minimum tree depth and wraps it until it matches the depth of the start of 
+   the replacement range."
+  [tree range new-slice-node]
+  (let [{{start-id :id} :start} range
+        start-path-len (count (tree-id-path tree start-id))
+        wrap-layers-needed (- start-path-len MIN-TREE-DEPTH)
+        wrapped-new-slice-node (node/wrap-node new-slice-node wrap-layers-needed)]
+    (replace-tree-id-range-with-root tree range wrapped-new-slice-node)))
