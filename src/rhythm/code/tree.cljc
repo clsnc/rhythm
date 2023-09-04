@@ -83,6 +83,11 @@
     {:root root
      :id->parent-id id->parent-id}))
 
+(defn code-tree->vec-tree
+  "Converts a code tree to a vector tree."
+  [code-tree]
+  (node/code-node->vec-node (:root code-tree)))
+
 (def default-code-tree (vec-tree->code-tree default-arr-tree))
 
 (defn- concat-2-terms

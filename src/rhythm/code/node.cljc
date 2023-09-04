@@ -41,6 +41,15 @@
   [node child-id]
   (first (m/find-first #(= (second %) child-id) (m/indexed (:pos->id node)))))
 
+(defn code-node->vec-node
+  "Converts a code node to a vector node."
+  [code-node]
+  (if (node/code-term? code-node)
+    (:text code-node)
+    (let [id->child-node (:id->child code-node)
+          vec-nodes (mapv #(code-node->vec-node (id->child-node %)) (:pos->id code-node))]
+      vec-nodes)))
+
 (defn code-term?
   "Returns whether node is a term."
   [node]
