@@ -34,10 +34,12 @@ body {
 }
 
 .code-block {
-    display: flex;
+    box-sizing: border-box;
+    display: inline-flex;
     border-radius: 5px;
     background-color: #0a0a0a;
     overflow: hidden;
+    box-shadow: 0 0 8px 0 rgba(0, 0, 0, 0.4), 0 0 20px 0 rgba(0, 0, 0, 0.38);
 }
 
 .code-view, .code-eval {
@@ -46,12 +48,18 @@ body {
 
 .code-view {
     width: 100%;
-    min-width: 350px;
     background-color: #2f2f2f;
     cursor: text;
 }
 
+.code-view > .code-block {
+    margin: 5px;
+}
+
 .code-eval {
+    display: flex;
+    justify-content: center;
+    align-items: center;
     background-color: #404040;
 }
 
