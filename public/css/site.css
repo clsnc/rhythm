@@ -16,7 +16,7 @@ body {
 .editor-pane {
     box-sizing: border-box;
     min-width: max-content;
-    padding: 15px;
+    padding: 10px;
     border-radius: 10px;
     background-color: #202020;
     color: white;
