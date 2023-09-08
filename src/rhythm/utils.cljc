@@ -1,9 +1,13 @@
-(ns rhythm.utils)
+(ns rhythm.utils
+  (:require [clojure.core.rrb-vector :as v]))
 
-(defn assoc-last
-  "Calls assoc on the last element of a vector."
-  [v val]
-  (assoc v (dec (count v)) val))
+(declare update-parent-in)
+
+(defn assoc-from-end
+  "Like assoc, but pos is relative to the end of the vector. 0 is the last element, 1 is the second 
+   to last, etc."
+  [v pos val]
+  (assoc v (- (count v) 1 pos) val))
 
 (defn split-off-last
   "Returns the a tuple of the form [seq-of-all-but-last-element last-element]."
@@ -22,6 +26,11 @@
   "Returns a vector that is the concatenation of the given arguments."
   [& vs]
   (vec (apply concat vs)))
+
+(defn vec-cons
+  "Returns a new vector of e prepended to v."
+  [v e]
+  (v/catvec [e] v))
 
 (defn vec-insert-multiple
   "Merge the contents of insert-seq into a vector v at pos."

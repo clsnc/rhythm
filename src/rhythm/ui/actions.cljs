@@ -2,29 +2,45 @@
   (:require [rhythm.app-state :as app-state]
             [rhythm.code.location :as loc]
             [rhythm.ui.editor-framework.interop :as interop]
-            [rhythm.ui.prespace :as ps]
-            [rhythm.code.node :as node]))
+            [rhythm.code.node :as node]
+            [rhythm.utils :as utils]))
 
 (defn- content-change-data->new-selection
   "Calculates the new selection after the user changes editor content."
   [replace-range inserted-node]
-  (let [multiple-new-terms (or (< 1 (node/num-children inserted-node))
-                               (< 1 (node/num-children (node/first-child inserted-node))))
-        sel-end-id (:id (:end replace-range))
-        last-new-term (node/node->last-term inserted-node)
-        last-new-term-len (count (:text last-new-term))
-        sel-end-offset (if multiple-new-terms
-                         last-new-term-len
-                         (let [replace-start-offset (:offset (:start replace-range))]
-                           (+ replace-start-offset last-new-term-len)))]
-    (loc/->code-point-range (loc/->code-point sel-end-id sel-end-offset))))
+  (let [num-insert-lines (count inserted-node)
+        last-insert-line-node (peek inserted-node)
+        num-last-insert-line-terms (count last-insert-line-node)
+        last-insert-term (peek last-insert-line-node)
+        last-insert-term-len (count last-insert-term)
+        
+        ;; Offset line and term term counts are 1 less than insert line/count because they get 
+        ;; merged with their new predecessors.
+        num-offset-lines (dec num-insert-lines)
+        num-last-insert-line-offset-terms (dec num-last-insert-line-terms)
+        offset-path [num-offset-lines num-last-insert-line-offset-terms last-insert-term-len]
+        new-sel-path (vec (loc/pad-and-add-paths (:start replace-range) offset-path))
+        
+        ;; The second to last step in the path, the term position, depends on whether multiple 
+        ;; lines are being inserted.
+        are-multiple-insert-lines (> num-insert-lines 1)
+        new-sel-path (if are-multiple-insert-lines
+                       (utils/assoc-from-end new-sel-path 1 num-last-insert-line-offset-terms)
+                       new-sel-path)
+        
+        ;; The last step of the path, the offset in the term, depends on whether that term will 
+        ;; be merged into a pre-existing term.
+        are-multiple-insert-terms (or are-multiple-insert-lines (> num-last-insert-line-terms 1))
+        new-sel-path (if are-multiple-insert-terms
+                       (utils/assoc-from-end new-sel-path 0 last-insert-term-len)
+                       new-sel-path)]
+    (loc/->code-point-range new-sel-path)))
 
 (defn handle-editor-content-change!
   "Handles on onChange event from an editor."
   [^js event swap-editor-state!]
   (.preventDefault event)
-  (let [prespace-replace-range (interop/jsEditorRange->code-range (.-replaceRange event))
-        replace-range (ps/maybe-prespace-range->range prespace-replace-range)
+  (let [replace-range (interop/jsEditorRange->code-range (.-replaceRange event))
         new-text (.-data event)
         inserted-node (node/text->code-node new-text)
         new-selection (content-change-data->new-selection replace-range inserted-node)]
@@ -35,6 +51,5 @@
 (defn handle-editor-selection-change!
   "Handles an onSelect event from an editor."
   [event swap-editor-state!]
-  (let [prespace-new-selection (interop/jsEditorRange->code-range (.-selectionRange event))
-        new-selection (ps/maybe-prespace-range->range prespace-new-selection)]
+  (let [new-selection (interop/jsEditorRange->code-range (.-selectionRange event))]
     (swap-editor-state! app-state/replace-selection new-selection)))

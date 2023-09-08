@@ -1,162 +1,92 @@
-(ns rhythm.code.node 
-  (:require [clojure.string :as string]
-            [medley.core :as m]))
+(ns rhythm.code.node
+  (:require [rhythm.utils :as u]
+            [clojure.core.rrb-vector :as v]
+            [clojure.string :as string]))
 
-(declare code-term? nodes->new-parent-node nth-child remove-nth-child)
+(def MIN-TREE-DEPTH 3)
 
-(defn ->code-node [pos->id id->child id]
-  {:pos->id pos->id
-   :id->child id->child
-   :id id})
-
-(defn ->code-term [text id]
-  {:text text
-   :id id})
-
-(defn ->new-code-node
-  "Returns a code node with a new ID."
-  [pos->id id->child]
-  (->code-node pos->id id->child (gensym)))
-
-(defn ->new-code-term
-  "Returns a code term with a new ID."
-  [text]
-  (->code-term text (gensym)))
-
-(defn append-child
-  "Returns node with child appended as a new subnode."
-  [node child]
-  (let [child-id (:id child)]
-    (-> node
-        (update :pos->id conj child-id)
-        (update :id->child assoc child-id child))))
-
-(defn child-by-id
-  "Returns the child of node with ID child-id."
-  [node child-id]
-  (get-in node [:id->child child-id]))
-
-(defn child-pos-from-id
-  "Returns the position of the child of node with ID child-id."
-  [node child-id]
-  (first (m/find-first #(= (second %) child-id) (m/indexed (:pos->id node)))))
-
-(defn code-node->vec-node
-  "Converts a code node to a vector node."
-  [code-node]
-  (if (code-term? code-node)
-    (:text code-node)
-    (let [id->child-node (:id->child code-node)
-          vec-nodes (mapv #(code-node->vec-node (id->child-node %)) (:pos->id code-node))]
-      vec-nodes)))
-
-(defn code-term?
-  "Returns whether node is a term."
-  [node]
-  (some? (:text node)))
-
-(defn first-child
-  "Returns the first child of node."
-  [node]
-  (nth-child node 0))
-
-(defn last-child
-  "Returns the last child of node."
-  [node]
-  ((:id->child node) (peek (:pos->id node))))
+(def code-term? string?)
 
 (defn- line->code-node
   "Converts a line of text to a code node."
   [line]
-  (let [term-strs (string/split line " " -1)
-        terms (map ->new-code-term term-strs)]
-    (nodes->new-parent-node terms)))
-
-(defn- node->edge-term
-  "Helper function that returns the first or last descendant term of node depending 
-   on whether first or last/peek is passed as edge-f."
-  [edge-f node]
-  (loop [node node]
-    (if (code-term? node)
-      node
-      (recur ((:id->child node) (edge-f (:pos->id node)))))))
-
-(defn node->last-term
-  "Returns the last descendant term of node."
-  [node]
-  (node->edge-term peek node))
-
-(defn node-children
-  "Returns a sequence of child nodes of node."
-  [node]
-  (map (:id->child node) (:pos->id node)))
-
-(defn- nodes->new-parent-node
-  "Returns a new parent node containing nodes as children."
-  [nodes]
-  (let [pos->id (vec (map :id nodes))
-        id->child (into {} (map #(vector (:id %) %) nodes))]
-    (->new-code-node pos->id id->child)))
-
-(defn nth-child
-  "Returns the child of node that is at pos."
-  [node pos]
-  (child-by-id node (get-in node [:pos->id pos])))
-
-(defn num-children
-  "Returns the number of children of node."
-  [node]
-  (count (:pos->id node)))
-
-(defn remove-first-child
-  "Returns node with its first child removed."
-  [node]
-  (remove-nth-child node 0))
-
-(defn remove-nth-child
-  "Returns node with its nth child removed."
-  [node n]
-  (-> node
-      (update :id->child dissoc ((:pos->id node) n))
-      (update :pos->id #(vec (m/remove-nth n %)))))
-
-(defn replace-child-at-pos
-  "Returns node with the child at pos replace with new-child."
-  [node pos new-child]
-  (let [old-pos->id (:pos->id node)
-        new-child-id (:id new-child)
-        new-pos->id (assoc old-pos->id pos new-child-id)
-        old-child-id (old-pos->id pos)
-        old-id->child (:id->child node)
-        new-id->child (-> old-id->child
-                          (dissoc old-child-id)
-                          (assoc new-child-id new-child))]
-    (assoc node
-           :pos->id new-pos->id
-           :id->child new-id->child)))
-
-(defn replace-last-child
-  "Returns node with the last child replace with new-child."
-  [node new-child]
-  (replace-child-at-pos node (dec (count (:pos->id node))) new-child))
+  (vec (string/split line " " -1)))
 
 (defn text->code-node
   "Converts a string to a code node."
   [text]
   (let [lines (string/split text "\n" -1)
         subnodes (map line->code-node lines)]
-    (nodes->new-parent-node subnodes)))
+    (vec subnodes)))
+
+(defn- deep-concat-merge-2-nodes
+  "Merges 2 nodes into 1. The last subnode of a and the first subnode of b are merged recursively."
+  [a b]
+  (if (code-term? a)
+    (str a b)
+    (let [combined-subnode (deep-concat-merge-2-nodes (peek a) (first b))
+          a-start-slice (v/subvec a 0 (dec (count a)))
+          b-end-slice (v/subvec b 1)]
+      (v/catvec a-start-slice [combined-subnode] b-end-slice))))
+
+(defn- deep-concat-merge-nodes
+  "Merges multiple nodes into 1. The 2 subnodes at each joining edge (for nodes a and b, the last of 
+   a and the first of b)are merged recursively."
+  [& nodes]
+  (reduce deep-concat-merge-2-nodes nodes))
+
+(defn- side-deep-slice-node
+  "Helper function that slices node and its subnodes along a given path. The slice that is kept 
+   is determined by the term-slice, vec-slice, and vec-join functions."
+  [node path term-slice vec-slice vec-join]
+  (let [pos (first path)]
+    (if (code-term? node)
+      (term-slice node pos)
+      (let [subnode-to-slice (node pos)
+            sliced-subnode (side-deep-slice-node subnode-to-slice (rest path) term-slice vec-slice vec-join)
+            kept-node-slice (vec-slice node pos)
+            new-node (vec-join kept-node-slice sliced-subnode)]
+        new-node))))
+
+(defn- left-deep-slice-node
+  "Slices node and its subnodes along a given path, returning the left (first) slice."
+  [node path]
+  (side-deep-slice-node node path
+                        #(subs %1 0 %2)
+                        #(v/subvec %1 0 %2)
+                        conj))
+
+(defn- right-deep-slice-node
+  "Slices node and its subnodes along a given path, returning the right (second) slice."
+  [node path]
+  (side-deep-slice-node node path
+                        subs
+                        #(v/subvec %1 (inc %2))
+                        u/vec-cons))
 
 (defn wrap-node
   "Wraps node in num-layers new ancestor nodes. If num-layers is not provided, node will 
    be wrapped once."
   ([node]
-   (nodes->new-parent-node [node]))
-  
+   [node])
+
   ([node num-layers]
-   (loop [curr-node node
-          layers-left num-layers]
-     (if (<= layers-left 0)
-       curr-node
-       (recur (wrap-node curr-node)
-              (dec layers-left))))))
+   (nth (iterate wrap-node node) num-layers)))
+
+(defn replace-path-range
+  "Replace a range of node and its subnodes with new-inner-node. The edges of the remaining 
+   parts of node and its subnodes will be merged with the edges of new-inner-node and its subnodes."
+  [node start-path end-path new-inner-node]
+  (deep-concat-merge-nodes (left-deep-slice-node node start-path)
+                           new-inner-node
+                           (right-deep-slice-node node end-path)))
+
+(defn replace-path-range-with-wrapped
+  "Replace a range of node and its subnodes with new-inner-node. The edges of the remaining 
+   parts of node and its subnodes will be merged with the edges of new-inner-node and its subnodes.
+   new-inner-node is assumed to have edge depth MIN-TREE-DEPTH and will be deepened by wrapping 
+   with new ancestor nodes to match the depth of start-path."
+  [node start-path end-path new-inner-node]
+  (let [num-wrap-layers (- (count start-path) MIN-TREE-DEPTH)
+        wrapped-new-inner-node (wrap-node new-inner-node num-wrap-layers)]
+    (replace-path-range node start-path end-path wrapped-new-inner-node)))

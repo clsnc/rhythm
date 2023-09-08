@@ -9,32 +9,31 @@
 
 (defn- editor-term
   "Displays a term of a code tree."
-  [term]
+  [term term-path]
   [e/Editable
    {:class :code-term
-    :editableId (:id term)
-    :value (:text term)}])
+    :editableId term-path
+    :value term}])
 
 (defn- node-prespace
   "Displays a space between editor nodes."
-  [node-id]
+  [node-path]
   [e/Editable
    {:class :code-prespace
-    :editableId (ps/eid->prespace-eid node-id)
+    :editableId (ps/path->prespace-path node-path)
     :value " "}])
 
 (defn- editor-node
   "Displays a node of a code tree."
-  [node]
-  (let [id->child (:id->child node)
-        space+subnode-vecs (for [[child-pos child-id] (m/indexed (:pos->id node))]
-                             (let [child (id->child child-id)
-                                   child-component-class (if (node/code-term? child)
+  [node node-path]
+  (let [space+subnode-vecs (for [[child-pos child] (m/indexed node)]
+                             (let [child-component-class (if (node/code-term? child)
                                                            editor-term
                                                            editor-node)
-                                   rendered-node ^{:key child-id} [child-component-class child]]
+                                   child-path (conj node-path child-pos)
+                                   rendered-node ^{:key (gensym)} [child-component-class child child-path]]
                                (if (pos? child-pos)
-                                 [^{:key (str child-id :prespace)} [node-prespace child-id]
+                                 [^{:key (gensym)} [node-prespace child-path]
                                   rendered-node]
                                  [rendered-node])))
         spaces+subnodes (apply concat space+subnode-vecs)]
@@ -53,7 +52,5 @@
     :dragMomentum false}
    [:div.code-blocks
     {:onPointerDownCapture ui-utils/stop-propagation!}
-    (let [id->child (:id->child node)]
-      (for [child-id (:pos->id node)]
-        (let [child (id->child child-id)]
-          ^{:key child-id} [editor-node child])))]])
+    (for [[child-pos child] (m/indexed node)]
+      ^{:key (gensym)} [editor-node child [child-pos]])]])
