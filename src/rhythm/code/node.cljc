@@ -1,7 +1,8 @@
 (ns rhythm.code.node
   (:require [rhythm.utils :as u]
             [clojure.core.rrb-vector :as v]
-            [clojure.string :as string]))
+            [clojure.string :as string]
+            [rhythm.code.node :as node]))
 
 (def MIN-TREE-DEPTH 3)
 
@@ -90,3 +91,17 @@
   (let [num-wrap-layers (- (count start-path) MIN-TREE-DEPTH)
         wrapped-new-inner-node (wrap-node new-inner-node num-wrap-layers)]
     (replace-path-range node start-path end-path wrapped-new-inner-node)))
+
+(defn- wrap-position-range
+  "Replace a range of positions in a node with a new node containing that range as its subnodes."
+  [node start end]
+  (let [new-subnode (v/subvec node start end)
+        new-node-start (v/subvec node 0 start)
+        new-node-end (v/subvec node end)]
+    (v/catvec new-node-start [new-subnode] new-node-end)))
+
+(defn wrap-range
+  "Replace a range of positions in a node's descendant with a new node containing that range 
+   as its subnodes."
+  [node start-node-path end-node-pos]
+  (u/update-parent-in node start-node-path wrap-position-range end-node-pos))

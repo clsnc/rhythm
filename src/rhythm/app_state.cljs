@@ -22,3 +22,9 @@
   "Replaces a state's selection."
   [state new-selection]
   (assoc state :selection new-selection))
+
+(defn wrap-state-editor-node-range
+  "Replace a range of positions in a node's descendant with a new node containing that range 
+   as its subnodes."
+  [state start-node-path end-node-pos]
+  (update state :code-tree node/wrap-range start-node-path end-node-pos))

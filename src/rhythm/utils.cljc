@@ -39,6 +39,12 @@
               insert-seq
               (subvec v pos)))
 
+(defn vec-split-off-last
+  "Returns a tuple of the form [vec-of-all-but-last-element last-element]."
+  [v]
+  (let [last-pos (dec (count v))]
+    [(v/subvec v 0 last-pos) (v last-pos)]))
+
 (defn update-parent-in
   "Returns a nested associative structure m with the parent of the value at ks replaced with 
    the result of (apply f parent child-pos args)."

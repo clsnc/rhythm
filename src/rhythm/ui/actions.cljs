@@ -13,7 +13,7 @@
         num-last-insert-line-terms (count last-insert-line-node)
         last-insert-term (peek last-insert-line-node)
         last-insert-term-len (count last-insert-term)
-        
+
         ;; Offset line and term term counts are 1 less than insert line/count because they get 
         ;; merged with their new predecessors.
         num-offset-lines (dec num-insert-lines)
@@ -53,3 +53,24 @@
   [event swap-editor-state!]
   (let [new-selection (interop/jsEditorRange->code-range (.-selectionRange event))]
     (swap-editor-state! app-state/replace-selection new-selection)))
+
+(defn handle-editor-key-down!
+  "Handles an onKeyDown event from an editor."
+  [event selection swap-editor-state!]
+  (when (= (.-key event) "Tab")
+    (.preventDefault event)
+    (let [{pre-wrap-start-path :start
+           pre-wrap-end-path :end} selection
+          [pre-wrap-first-node-path pre-wrap-start-offset] (utils/vec-split-off-last pre-wrap-start-path)
+          pre-wrap-first-node-pos (peek pre-wrap-first-node-path)
+          pre-wrap-end-offset (peek pre-wrap-end-path)
+          pre-wrap-last-node-pos (nth pre-wrap-end-path (- (count pre-wrap-end-path) 2))
+          pre-wrap-end-node-pos (inc pre-wrap-last-node-pos) ;; This is the first node after the wrapped section.
+          wrap-len (- pre-wrap-end-node-pos pre-wrap-first-node-pos)
+          post-wrap-last-node-pos (dec wrap-len)
+          post-wrap-start-path (conj pre-wrap-first-node-path 0 pre-wrap-start-offset)
+          post-wrap-end-path (conj pre-wrap-first-node-path post-wrap-last-node-pos pre-wrap-end-offset)
+          post-wrap-sel (loc/->code-range post-wrap-start-path post-wrap-end-path)]
+      (swap-editor-state! #(-> %
+                               (app-state/wrap-state-editor-node-range pre-wrap-first-node-path pre-wrap-end-node-pos)
+                               (app-state/replace-selection post-wrap-sel))))))

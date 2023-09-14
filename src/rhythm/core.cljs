@@ -24,6 +24,7 @@
               :max-width 0
               :outline :none}
       :onChange #(actions/handle-editor-content-change! % swap-state!)
+      :onKeyDown #(actions/handle-editor-key-down! % selection swap-state!)
       :onSelect #(actions/handle-editor-selection-change! % swap-state!)
       :selection selection}
      ^{:key (gensym)} [editor/editor-pane code-tree]]))
