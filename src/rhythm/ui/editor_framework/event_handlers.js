@@ -11,8 +11,12 @@ export function handleBeforeInput(selRangeNoNorm, event, onChange) {
     onChange(event)
 }
 
-export function handleKeyDown(selRangeNoNorm, event, onChange) {
-    if(event.key === 'Backspace') {
+export function handleKeyDown(selRangeNoNorm, event, onChange, onKeyDown) {
+    if(onKeyDown) {
+        onKeyDown(event)
+    }
+
+    if(!event.defaultPrevented && event.key === 'Backspace') {
         event.preventDefault()
         /* Normalization of the input range is required here because it cannot be done during 
            EditorRoot rendering. */

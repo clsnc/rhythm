@@ -9,7 +9,7 @@ const EditableIdJsonToDomElementObjContext = createContext()
 
 /* The React component for an editor root. This should be an ancestor of any EditorNode
    or Editable components. */
-export function EditorRoot({onChange, onSelect, selection, ...passedDivProps}) {
+export function EditorRoot({onChange, onKeyDown, onSelect, selection, ...passedDivProps}) {
     /* This object contains a mapping from JSON.stringify(editableId) -> DOM element. 
        When the selection prop is updated, the editable IDs in the prop can be used 
        with this object to access the associated DOM elements so the browser selection 
@@ -59,7 +59,7 @@ export function EditorRoot({onChange, onSelect, selection, ...passedDivProps}) {
 
     if(onChange) {
         divProps.onBeforeInput = (e) => handleBeforeInput(selRangeNotNorm, e, onChange)
-        divProps.onKeyDown = (e) => handleKeyDown(selRangeNotNorm, e, onChange)
+        divProps.onKeyDown = (e) => handleKeyDown(selRangeNotNorm, e, onChange, onKeyDown)
     }
 
     return createElement(
