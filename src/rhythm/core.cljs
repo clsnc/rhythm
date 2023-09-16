@@ -3,9 +3,7 @@
      [reagent.core :as r]
      [reagent.dom.client :as d]
      [rhythm.app-state :as app-state]
-     [rhythm.ui.actions :as actions]
-     [rhythm.ui.editor :as editor]
-     [rhythm.ui.editor-framework.interop :as e]))
+     [rhythm.ui.editor :as editor]))
 
 (def state-atom (r/atom (app-state/->start-state)))
 
@@ -17,17 +15,7 @@
 
 (defn home-page []
   (let [{:keys [code-tree selection]} @state-atom]
-    [e/EditorRoot
-     ;; Only the contents of the EditorRoot should be shown, not the div itself.
-     {:style {:position :absolute
-              :max-height 0
-              :max-width 0
-              :outline :none}
-      :onChange #(actions/handle-editor-content-change! % swap-state!)
-      :onKeyDown #(actions/handle-editor-key-down! % selection swap-state!)
-      :onSelect #(actions/handle-editor-selection-change! % swap-state!)
-      :selection selection}
-     ^{:key (gensym)} [editor/editor-pane code-tree]]))
+    [editor/editor-root code-tree selection swap-state!]))
 
 ;; -------------------------
 ;; Initialize app

@@ -1,5 +1,6 @@
 (ns rhythm.ui.editor 
   (:require [rhythm.code.evaluation :as eval]
+            [rhythm.ui.actions :as actions]
             [rhythm.ui.editor-framework.interop :as e]
             [rhythm.ui.motion :as motion]
             [rhythm.ui.ui-utils :as ui-utils]
@@ -43,7 +44,7 @@
       {:contentEditable false}
       (str (:clj-val (eval/eval-node node)))]]))
 
-(defn editor-pane
+(defn- editor-pane
   "Displays an editor pane containing the visual representation of code tree."
   [node]
   [motion/div
@@ -54,3 +55,17 @@
     {:onPointerDownCapture ui-utils/stop-propagation!}
     (for [[child-pos child] (m/indexed node)]
       ^{:key (gensym)} [editor-node child [child-pos]])]])
+
+(defn editor-root
+  [code-tree selection swap-state!]
+  [e/EditorRoot
+   ;; Only the contents of the EditorRoot should be shown, not the div itself.
+   {:style {:position :absolute
+            :max-height 0
+            :max-width 0
+            :outline :none}
+    :onChange #(actions/handle-editor-content-change! % swap-state!)
+    :onKeyDown #(actions/handle-editor-key-down! % selection swap-state!)
+    :onSelect #(actions/handle-editor-selection-change! % swap-state!)
+    :selection selection}
+   ^{:key (gensym)} [editor-pane code-tree]])
