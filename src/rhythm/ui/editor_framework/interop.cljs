@@ -1,9 +1,8 @@
 (ns rhythm.ui.editor-framework.interop
-  [:require
-   ["./components" :rename {EditorRoot jsEditorRoot
-                            Editable jsEditable}]
-   [reagent.core :as r]
-   [rhythm.utils :as utils]])
+  (:require ["./components" :rename {EditorRoot jsEditorRoot
+                                     Editable jsEditable}]
+            [reagent.core :as r]
+            [rhythm.utils :as utils]))
 
 (def AdaptedJsEditorRoot (r/adapt-react-class jsEditorRoot))
 (def AdaptedEditable (r/adapt-react-class jsEditable))
