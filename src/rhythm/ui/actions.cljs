@@ -1,9 +1,10 @@
 (ns rhythm.ui.actions
-  (:require [rhythm.app-state :as app-state]
+  (:require [clojure.edn :as edn]
+            [rhythm.app-state :as app-state]
             [rhythm.code.location :as loc]
-            [rhythm.ui.editor-framework.interop :as interop]
             [rhythm.code.node :as node]
-            [rhythm.utils :as utils]))
+            [rhythm.utils :as utils]
+            [rhythm.ui.prespace :as ps]))
 
 (defn- content-change-data->new-selection
   "Calculates the new selection after the user changes editor content."
@@ -36,11 +37,29 @@
                        new-sel-path)]
     (loc/->code-point-range new-sel-path)))
 
+(defn- jsEditorId+offset->code-path
+  "Converts an editor ID and offset to a code path."
+  [js-id offset]
+  ;; The ID is converted from EDN here because it is serialized in the Editable component.
+  (let [raw-inner-path (edn/read-string (js->clj js-id))
+        [inner-path offset] (if (ps/prespace-path? raw-inner-path)
+                              [(ps/prespace-path->path raw-inner-path) (dec offset)]
+                              [raw-inner-path offset])]
+    (conj inner-path offset)))
+
+(defn- jsEditorRange->code-range
+  "Converts an EditorRange to a code range."
+  [^js js-range]
+  (when js-range
+    (let [start-path (jsEditorId+offset->code-path (.-startId js-range) (.-startOffset js-range))
+          end-path (jsEditorId+offset->code-path (.-endId js-range) (.-endOffset js-range))]
+      (loc/->code-range start-path end-path))))
+
 (defn handle-editor-content-change!
   "Handles on onChange event from an editor."
   [^js event swap-editor-state!]
   (.preventDefault event)
-  (let [replace-range (interop/jsEditorRange->code-range (.-replaceRange event))
+  (let [replace-range (jsEditorRange->code-range (.-replaceRange event))
         new-text (.-data event)
         inserted-node (node/text->code-node new-text)
         new-selection (content-change-data->new-selection replace-range inserted-node)]
@@ -51,7 +70,7 @@
 (defn handle-editor-selection-change!
   "Handles an onSelect event from an editor."
   [event swap-editor-state!]
-  (let [new-selection (interop/jsEditorRange->code-range (.-selectionRange event))]
+  (let [new-selection (jsEditorRange->code-range (.-selectionRange event))]
     (swap-editor-state! app-state/replace-selection new-selection)))
 
 (defn handle-editor-key-down!
