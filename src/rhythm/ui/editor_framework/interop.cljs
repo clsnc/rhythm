@@ -18,26 +18,23 @@
   ;; by Reagent, using that would be an improvement on serializing and deserializing.
   (apply vector AdaptedEditable (update props :editableId pr-str) children))
 
-(defn jsEditorPoint->code-path
-  "Converts an EditorPoint to a code point."
-  [js-point]
+(defn- jsEditorId+offset->code-path
+  "Converts an editor ID and offset to a code path."
+  [js-id offset]
   ;; The ID is converted from EDN here because it is serialized in the Editable component.
-  (let [raw-inner-path (edn/read-string (js->clj (.-id js-point)))
-        raw-offset (.-offset js-point)
+  (let [raw-inner-path (edn/read-string (js->clj js-id))
         [inner-path offset] (if (ps/prespace-path? raw-inner-path)
-                              [(ps/prespace-path->path raw-inner-path) (dec raw-offset)]
-                              [raw-inner-path raw-offset])]
+                              [(ps/prespace-path->path raw-inner-path) (dec offset)]
+                              [raw-inner-path offset])]
     (conj inner-path offset)))
 
 (defn jsEditorRange->code-range
   "Converts an EditorRange to a code range."
   [^js js-range]
   (when js-range
-    (let [start-point (jsEditorPoint->code-path (.-startPoint js-range))
-          end-point (jsEditorPoint->code-path (.-endPoint js-range))
-          anchor-point (jsEditorPoint->code-path (.-anchorPoint js-range))
-          focus-point (jsEditorPoint->code-path (.-focusPoint js-range))]
-      (loc/->code-range start-point end-point anchor-point focus-point))))
+    (let [start-path (jsEditorId+offset->code-path (.-startId js-range) (.-startOffset js-range))
+          end-path (jsEditorId+offset->code-path (.-endId js-range) (.-endOffset js-range))]
+      (loc/->code-range start-path end-path))))
 
 (defn- code-range->js-selection-prop
   "Converts a code range to a selection prop object."

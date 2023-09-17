@@ -156,6 +156,17 @@ export const EditorRange = class EditorRange {
         return domRange
     }
 
+    /* Returns an object containing the range IDs and offsets. This matches the format of 
+       selection ranges provided to the editor as props. */
+    toExportRange() {
+        return {
+            startId: this.startPoint.id,
+            startOffset: this.startPoint.offset,
+            endId: this.endPoint.id,
+            endOffset: this.endPoint.offset
+        }
+    }
+
     /* Returns a new EditorRange covering the editables referenced by the DOM Range object. */
     static fromDomRange(domRange) {
         const {
@@ -181,9 +192,10 @@ export const EditorRange = class EditorRange {
 }
 
 /* Add .replaceRange (the suggested range to be replaced) and .afterRange (the suggested 
-   range to select if the suggested change is made) to a change event. */
+   range to select if the suggested change is made) as export ranges to a change event. */
 export function addChangeRangeDataToEvent(event, replaceRange, afterRange) {
-    Object.assign(event, {replaceRange, afterRange})
+    event.replaceRange = replaceRange.toExportRange()
+    event.afterRange = afterRange.toExportRange()
 }
 
 /* A position comparator for DOM nodes in the document */

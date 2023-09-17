@@ -40,7 +40,7 @@ export function handleSelectionChange(event, providedEditorSelection, onSelect) 
     /* Only call onSelect if the new selection is different from the provided one. This 
        prevents an endless loop of selection change events. */
     if(!editorRangeUnorderedEquals(currEditorSelection, providedEditorSelection)) {
-        event.selectionRange = currEditorSelection
+        event.selectionRange = currEditorSelection.toExportRange()
         onSelect(event)
     }
 }
