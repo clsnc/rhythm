@@ -215,10 +215,10 @@ export function editorOffsetFromDomOffset(domOffset, element) {
     return Math.min(domOffset, element.editorValue.length)
 }
 
-/* Returns the current window selection as an editor selection. */
+/* Returns the current window selection as a normalized editor selection. */
 export function getEditorSelection() {
     const selection = window.getSelection()
-    return EditorRange.fromDomRange(selection)
+    return EditorRange.fromDomRange(selection).normalize()
 }
 
 /* Similar to x.unorderedEquals(y), except that a nullish x is handled smoothly. */
