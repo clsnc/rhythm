@@ -28,12 +28,18 @@
   "Displays a node of a code tree."
   [node node-path]
   (let [space+subnode-vecs (for [[child-pos child] (m/indexed node)]
-                             (let [child-component-class (if (node/code-term? child)
+                             (let [is-term (node/code-term? child)
+                                   child-component-class (if is-term
                                                            editor-term
                                                            editor-node)
                                    child-path (conj node-path child-pos)
-                                   rendered-node ^{:key (gensym)} [child-component-class child child-path]]
-                               (if (pos? child-pos)
+                                   rendered-node ^{:key (gensym)} [child-component-class child child-path]
+                                   should-use-prespace (and is-term
+                                                            ;; is the previous child a term?
+                                                            (let [previous-child-pos (dec child-pos)]
+                                                              (when (>= previous-child-pos 0)
+                                                                (node/code-term? (node previous-child-pos)))))]
+                               (if should-use-prespace
                                  [^{:key (gensym)} [node-prespace child-path]
                                   rendered-node]
                                  [rendered-node])))
