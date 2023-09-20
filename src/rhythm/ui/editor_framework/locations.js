@@ -16,11 +16,6 @@ function isInline(element) {
     return window.getComputedStyle(element).display === "inline"
 }
 
-/* Returns whether a DOM element is styled to be something other than inline. */
-function isNotInline(element) {
-    return !isInline(element)
-}
-
 /* Represents a point in an editor. A point is any location that the caret could have. */
 export const EditorPoint = class EditorPoint {
     constructor(idJsonToDomElementObj, id, offset) {
@@ -45,12 +40,12 @@ export const EditorPoint = class EditorPoint {
     normalize() {
         const currElement = this.currentElement()
         if(this.offset === 0 && isInline(currElement)) {
-            const prevEditable = findPreviousMatchingDomNode(currElement, isEditable, isNotInline)
-            if(prevEditable) {
+            const prevElement = currElement.previousSibling
+            if(prevElement && isEditable(prevElement) && isInline(prevElement)) {
                 /* If the offset is 0 and both this element and its previous sibling 
                    are inline, return a point at the end of the previous sibling. */
                 return EditorPoint.fromDomElementAndOffset(
-                    prevEditable, prevEditable.editorValue.length)
+                    prevElement, prevElement.editorValue.length)
             }
         }
         return this
